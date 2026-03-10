@@ -62,4 +62,6 @@ dependencies {
     // 2. Media3 (동영상 매뉴얼 팝업 기능)
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
+    // USB Serial 통신 라이브러리 추가
+    implementation("com.github.mik3y:usb-serial-for-android:3.8.0")
 }
