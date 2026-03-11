@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val appVersionName = "1.6.0"
+
 android {
     namespace = "com.example.agv_rfid_manager"
     compileSdk {
@@ -16,14 +18,15 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -36,6 +39,15 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val outputImpl = output as? com.android.build.api.variant.impl.VariantOutputImpl
+            outputImpl?.outputFileName = "AGV_RFID_Manager_v${appVersionName}.apk"
+        }
     }
 }
 
