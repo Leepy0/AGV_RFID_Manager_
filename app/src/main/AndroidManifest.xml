@@ -36,5 +36,5 @@
                 android:resource="@xml/device_filter" />
         </activity>
     </application>
-
+    <uses-feature android:name="android.hardware.usb.host" />
 </manifest>
