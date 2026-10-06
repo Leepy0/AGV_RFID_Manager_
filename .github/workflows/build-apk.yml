@@ -46,7 +46,7 @@ jobs:
       - name: 의존성 버전 기록
         continue-on-error: true
         run: |
-          V=$(./gradlew -q :app:dependencies --configuration debugRuntimeClasspath | grep -m1 -o "dev.chrisbanes.haze:haze:[^ ]*" || true)
+          V=$(./gradlew -q :app:dependencies --configuration debugRuntimeClasspath | grep -m1 "dev.chrisbanes.haze:haze:" | sed "s/^[^d]*//" || true)
           echo "::notice title=Haze version::$V"
 
       - name: APK 경로 확인
