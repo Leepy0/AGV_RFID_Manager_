@@ -85,5 +85,5 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
     // Glass 배경 blur (Haze 1.x)
-    implementation("dev.chrisbanes.haze:haze:1.+")
+    implementation("dev.chrisbanes.haze:haze:[1.0,1.7)")  // 1.7부터 compileSdk 37 필요
 }
