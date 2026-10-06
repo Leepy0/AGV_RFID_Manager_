@@ -12,6 +12,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -60,22 +61,20 @@ fun Modifier.glass(
     return filled.border(if (low) 1.dp else 0.5.dp, if (low) c.line else c.hair, shape)
 }
 
-// 배경: 블루·민트·보라 그라데이션 블롭 (저사양 모드에서는 단색)
+// 배경: 블루·민트·보라 그라데이션 블롭
+// 정적 그라데이션이라 저사양 모드에서도 유지 (graphicsLayer로 캐시 → 스크롤 시 다시 그리지 않음)
 @Composable
 fun MeshBackground(modifier: Modifier = Modifier) {
     val c = AppTheme.colors
-    val low = AppTheme.lowEffects
-    Canvas(modifier.fillMaxSize()) {
+    Canvas(modifier.fillMaxSize().graphicsLayer()) {
         drawRect(c.bg)
-        if (!low) {
-            val w = size.width
-            val h = size.height
-            fun blob(color: Color, x: Float, y: Float, r: Float) {
-                drawRect(Brush.radialGradient(listOf(color, Color.Transparent), center = Offset(x, y), radius = r))
-            }
-            blob(c.blob1, -0.05f * w, 0.06f * h, 1.10f * w)
-            blob(c.blob2, 1.08f * w, 0.46f * h, 1.00f * w)
-            blob(c.blob3, 0.18f * w, 1.02f * h, 1.15f * w)
+        val w = size.width
+        val h = size.height
+        fun blob(color: Color, x: Float, y: Float, r: Float) {
+            drawRect(Brush.radialGradient(listOf(color, Color.Transparent), center = Offset(x, y), radius = r))
         }
+        blob(c.blob1, -0.05f * w, 0.06f * h, 1.10f * w)
+        blob(c.blob2, 1.08f * w, 0.46f * h, 1.00f * w)
+        blob(c.blob3, 0.18f * w, 1.02f * h, 1.15f * w)
     }
 }

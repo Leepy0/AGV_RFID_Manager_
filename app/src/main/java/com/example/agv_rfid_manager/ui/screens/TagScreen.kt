@@ -249,7 +249,7 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
         }
     }
 
-    val shape = RoundedCornerShape(26.dp)
+    val shape = RoundedCornerShape(28.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -257,15 +257,15 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
             .then(if (low) Modifier else Modifier.shadow(16.dp, shape, ambientColor = color, spotColor = color))
             .clip(shape)
             .background(c.solid)
-            .border(1.5.dp, color.copy(alpha = 0.55f), shape)
+            .border(1.dp, color.copy(alpha = 0.5f), shape)
             .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)),
+                modifier = Modifier.size(38.dp).clip(CircleShape).background(color.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) { Icon(look.icon, null, tint = color, modifier = Modifier.size(21.dp)) }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(look.label, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
                 if (look.sub.isNotEmpty()) {
@@ -498,7 +498,8 @@ fun PresetRow(fullCode: String, onLoad: (String) -> Unit) {
                     .then(
                         when {
                             editMode -> Modifier.border(1.5.dp, c.orange, shape)
-                            selected -> Modifier.border(1.5.dp, c.blue, shape)
+                            // 선택된 프리셋: 파란 틴트 + 테두리 (시안 A)
+                            selected -> Modifier.background(c.blue.copy(alpha = 0.14f), shape).border(1.5.dp, c.blue, shape)
                             else -> Modifier
                         },
                     )

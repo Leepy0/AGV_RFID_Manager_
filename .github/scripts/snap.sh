@@ -50,9 +50,8 @@ shot() { sleep "${2:-1.5}"; adb exec-out screencap -p > "snaps/$1.png"; }
 adb install -r "$(ls app/build/outputs/apk/debug/*.apk | head -1)"
 adb shell am start -n $PKG/.MainActivity
 wait_text "태그" 60
-shot 01_start_nfc_dialog 2
-tap_text "취소"
-shot 02_tag_idle
+shot 01_start 2
+shot 02_tag_idle 0.5
 
 tap_text "쓰기"
 shot 03_tag_writing 0.5
