@@ -128,6 +128,8 @@ import kotlinx.coroutines.launch
 
 enum class SheetType { CODES, HISTORY }
 
+private val DEFAULT_PRESETS = listOf("0T01", "0T04", "0T07", "0T21", "0T22")
+
 // 화면과 무관하게 항상 동작해야 하는 태그 로직 (연속 쓰기 복귀, 쓰기 대기 시간 초과 등)
 @Composable
 fun TagEffects(state: TagState, actions: TagActions, settings: SettingsState) {
@@ -454,9 +456,10 @@ fun PresetRow(fullCode: String, onLoad: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val tick = rememberTick()
     val keys = remember { (1..5).map { Keys.preset(it) } }
+    // 저장된 값이 없는 칸은 기본 프리셋으로 표시 (기존: 모두 0T00)
     val presets by remember(context) {
-        context.dataStore.data.map { prefs -> keys.map { prefs[it] ?: "0T00" } }
-    }.collectAsState(initial = listOf("0T01", "0T04", "0T07", "0T21", "0T22"))
+        context.dataStore.data.map { prefs -> keys.mapIndexed { i, k -> prefs[k] ?: DEFAULT_PRESETS[i] } }
+    }.collectAsState(initial = DEFAULT_PRESETS)
     var editMode by remember { mutableStateOf(false) }
     // 롱프레스·편집 저장 시 항상 최신 입력값 사용
     val latestCode by rememberUpdatedState(fullCode)
