@@ -78,7 +78,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
 private val TAB_BAR_HEIGHT = 64.dp
-private val ACTION_BAR_HEIGHT = 122.dp
+private val ACTION_BAR_HEIGHT = 146.dp  // 10 + 세그먼트 44 + 10 + 버튼 72 + 10
 
 // 앱 루트: 배경(hazeSource) 위에 탭별 화면, 그 위에 떠 있는 액션 바·탭바·시트
 @Composable
@@ -96,7 +96,6 @@ fun MainApp(
     var sheet by remember { mutableStateOf<SheetType?>(null) }
     var lastSheet by remember { mutableStateOf(SheetType.CODES) }
     var confirmClear by remember { mutableStateOf(false) }
-    var nfcDismissed by rememberSaveable { mutableStateOf(false) }
     val hazeState = remember { HazeState() }
 
     // 폴드 펼침·태블릿: 너비·높이 모두 600dp 이상이면 2단
@@ -108,7 +107,6 @@ fun MainApp(
     else tabBarBottom + TAB_BAR_HEIGHT + 28.dp
 
     TagEffects(tag, actions, settings)
-    LaunchedEffect(tag.nfcEnabled) { if (tag.nfcEnabled) nfcDismissed = false }
     LaunchedEffect(sheet) { sheet?.let { lastSheet = it } }
     BackHandler(enabled = sheet != null) { sheet = null }
 
@@ -214,15 +212,6 @@ fun MainApp(
             destructive = true,
             onConfirm = { actions.clearHistory(); sheet = null },
             onDismiss = { confirmClear = false },
-        )
-    }
-    if (!tag.nfcEnabled && !nfcDismissed && tab == 0) {
-        ConfirmDialog(
-            title = t("d_noff"),
-            message = t("d_ndis"),
-            confirmText = t("d_set"),
-            onConfirm = { context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) },
-            onDismiss = { nfcDismissed = true },
         )
     }
 }

@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "2.0.0"
+val appVersionName = "2.0.1"
 
 android {
     namespace = "com.example.agv_rfid_manager"
@@ -17,7 +17,7 @@ android {
         applicationId = "com.example.agv_rfid_manager"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
+        versionCode = 3
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

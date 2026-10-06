@@ -187,29 +187,31 @@ fun ActionButton(
     color: Color,
     tinted: Boolean = false,
     code: String? = null,
+    height: Dp = 56.dp,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val c = AppTheme.colors
     val tick = rememberTick()
+    val big = height >= 64.dp
     val bg = if (tinted) color.copy(alpha = 0.16f).compositeOver(c.solid) else color
     val fg = if (tinted) color else Color.White
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(19.dp))
+            .height(height)
+            .clip(RoundedCornerShape(if (big) 22.dp else 19.dp))
             .background(bg)
             .clickable { tick(); onClick() },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = fg, modifier = Modifier.size(22.dp))
+        Icon(icon, null, tint = fg, modifier = Modifier.size(if (big) 26.dp else 22.dp))
         Spacer(Modifier.width(8.dp))
-        Text(text, color = fg, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(text, color = fg, fontSize = if (big) 20.sp else 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         if (code != null) {
-            Spacer(Modifier.width(8.dp))
-            Text(code, style = mono(18.sp), color = fg.copy(alpha = 0.9f))
+            Spacer(Modifier.width(10.dp))
+            Text(code, style = mono(if (big) 20.sp else 18.sp), color = fg.copy(alpha = 0.9f))
         }
     }
 }

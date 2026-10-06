@@ -4,7 +4,6 @@
 package com.example.agv_rfid_manager.ui.screens
 
 import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -55,6 +54,7 @@ import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Nfc
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.TapAndPlay
 import androidx.compose.material.icons.rounded.TimerOff
@@ -110,10 +110,8 @@ import com.example.agv_rfid_manager.data.getCommands
 import com.example.agv_rfid_manager.data.loadCode
 import com.example.agv_rfid_manager.data.parseHistory
 import com.example.agv_rfid_manager.ui.components.ActionButton
-import com.example.agv_rfid_manager.ui.components.LargeTitle
 import com.example.agv_rfid_manager.ui.components.SectionHeader
 import com.example.agv_rfid_manager.ui.components.Segmented
-import com.example.agv_rfid_manager.ui.components.StatusPill
 import com.example.agv_rfid_manager.ui.components.TintChip
 import com.example.agv_rfid_manager.ui.components.rememberTick
 import com.example.agv_rfid_manager.ui.theme.AppTheme
@@ -170,24 +168,17 @@ fun TagContent(
     val fullCode = state.fullCode
     val load: (String) -> Unit = { code -> loadCode(code, actions); focus.clearFocus() }
     val undo: (String) -> Unit = { code -> actions.requestWrite(code) }
-    val pill: @Composable () -> Unit = {
-        StatusPill(
-            text = if (state.nfcEnabled) t("nfc_on") else t("nfc_off"),
-            dotColor = if (state.nfcEnabled) c.green else c.red,
-            onClick = if (state.nfcEnabled) null else ({ context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) }),
-        )
-    }
+    val openNfc: () -> Unit = { context.startActivity(Intent(android.provider.Settings.ACTION_NFC_SETTINGS)) }
     val clearFocusOnTap = Modifier.pointerInput(Unit) { detectTapGestures(onTap = { focus.clearFocus() }) }
 
     if (twoPane) {
         Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp).then(clearFocusOnTap)) {
-            LargeTitle(t("tab_tag"), pill)
             Row(
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp, bottom = bottomPadding),
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp, bottom = bottomPadding),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) {
-                    StatusCard(state, onLoad = load, onUndo = undo, height = 300.dp, big = true)
+                    StatusCard(state, onLoad = load, onUndo = undo, onOpenNfc = openNfc, height = 320.dp, big = true)
                     if (settings.showHistory) RecentSection(state.history, onLoad = load) { onOpenSheet(SheetType.HISTORY) }
                 }
                 Column(Modifier.weight(1f).fillMaxHeight()) {
@@ -207,9 +198,8 @@ fun TagContent(
                 .padding(horizontal = 16.dp)
                 .then(clearFocusOnTap),
         ) {
-            LargeTitle(t("tab_tag"), pill)
-            Spacer(Modifier.height(6.dp))
-            StatusCard(state, onLoad = load, onUndo = undo, height = 214.dp)
+            Spacer(Modifier.height(12.dp))
+            StatusCard(state, onLoad = load, onUndo = undo, onOpenNfc = openNfc, height = 244.dp)
             Spacer(Modifier.height(12.dp))
             InputCard(state, actions, cmdTypes) { onOpenSheet(SheetType.CODES) }
             PresetRow(fullCode, onLoad = load)
@@ -230,14 +220,17 @@ private data class StatusLook(
 )
 
 @Composable
-fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Unit, height: Dp, big: Boolean = false) {
+fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Unit, onOpenNfc: () -> Unit, height: Dp, big: Boolean = false) {
     val c = AppTheme.colors
     val low = AppTheme.lowEffects
     val isKor = LocalIsKor.current
     val s = state.status
     val cont = state.isContinuous
+    // NFC가 꺼져 있으면 대기·쓰기 대기 대신 NFC 꺼짐을 우선 표시
+    val nfcOff = !state.nfcEnabled && (s == TagStatus.IDLE || s == TagStatus.WRITING)
 
     val look = when {
+        nfcOff -> StatusLook(c.red, Icons.Rounded.Nfc, t("nfc_off"), t("nfc_off_sub"), null, "")
         cont && s == TagStatus.WRITING -> StatusLook(c.indigo, Icons.Rounded.AllInclusive, t("st_cont"), t("st_cont_sub"), state.targetCode, commandDesc(state.targetCode, isKor))
         s == TagStatus.WRITING -> StatusLook(c.orange, Icons.Rounded.Edit, t("st_wait"), t("st_wait_sub"), state.targetCode, commandDesc(state.targetCode, isKor))
         s == TagStatus.READ_SUCCESS -> StatusLook(c.green, Icons.Rounded.CheckCircle, t("st_read"), t("st_read_at").format(state.eventTime), state.currentTag, commandDesc(state.currentTag, isKor))
@@ -282,6 +275,13 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
         }
 
         when {
+            nfcOff -> {
+                Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text(t("nfc_off_title"), fontSize = if (big) 34.sp else 28.sp, fontWeight = FontWeight.Bold, color = c.ink, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(16.dp))
+                    TintChip(Icons.Rounded.Settings, t("nfc_open"), color, onOpenNfc)
+                }
+            }
             s == TagStatus.ERROR -> {
                 Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(state.errorTitle, fontSize = if (big) 40.sp else 32.sp, fontWeight = FontWeight.Bold, color = c.ink, textAlign = TextAlign.Center)
@@ -369,7 +369,7 @@ fun InputCard(state: TagState, actions: TagActions, cmdTypes: List<String>, onOp
                 Icon(Icons.Rounded.ChevronRight, null, tint = c.blue, modifier = Modifier.size(18.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp).height(72.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // 1번째 자리: 16진수 1글자
             BasicTextField(
                 value = state.part1,
@@ -381,12 +381,12 @@ fun InputCard(state: TagState, actions: TagActions, cmdTypes: List<String>, onOp
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 cursorBrush = SolidColor(c.blue),
-                modifier = Modifier.width(62.dp).fillMaxHeight().then(boxMod),
+                modifier = Modifier.weight(1f).fillMaxHeight().then(boxMod),
                 decorationBox = { inner -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } },
             )
             // 2번째 자리: 커맨드 타입 선택
             Box(
-                modifier = Modifier.width(74.dp).fillMaxHeight().then(boxMod).clickable { menuOpen = true },
+                modifier = Modifier.weight(1f).fillMaxHeight().then(boxMod).clickable { menuOpen = true },
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -402,50 +402,58 @@ fun InputCard(state: TagState, actions: TagActions, cmdTypes: List<String>, onOp
                     }
                 }
             }
-            // 3·4번째 자리: 번호 + −/+
-            Row(Modifier.weight(1f).fillMaxHeight().then(boxMod)) {
-                Box(
-                    modifier = Modifier.width(52.dp).fillMaxHeight().background(c.fill).clickable {
-                        tick()
-                        val n = ((state.part3.text.toIntOrNull() ?: 0) - 1).coerceIn(0, 99)
-                        actions.setPart3(TextFieldValue(n.toString().padStart(2, '0')))
+            // 3·4번째 자리: 번호 (앞 두 칸과 같은 너비)
+            BasicTextField(
+                value = state.part3,
+                onValueChange = { input ->
+                    val f = input.text.filter { it.isDigit() }
+                    if (f.length <= 2) actions.setPart3(input.copy(text = f))
+                },
+                textStyle = mono(34.sp).copy(color = c.ink, textAlign = TextAlign.Center),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                cursorBrush = SolidColor(c.blue),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .then(boxMod)
+                    .onFocusChanged { fs ->
+                        // 포커스 시 전체 선택 (바로 덮어쓰기)
+                        if (fs.isFocused) scope.launch {
+                            delay(80)
+                            val v = latestPart3
+                            actions.setPart3(v.copy(selection = TextRange(0, v.text.length)))
+                        }
                     },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Remove, null, tint = c.ink, modifier = Modifier.size(26.dp)) }
-                BasicTextField(
-                    value = state.part3,
-                    onValueChange = { input ->
-                        val f = input.text.filter { it.isDigit() }
-                        if (f.length <= 2) actions.setPart3(input.copy(text = f))
-                    },
-                    textStyle = mono(34.sp).copy(color = c.ink, textAlign = TextAlign.Center),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    cursorBrush = SolidColor(c.blue),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .onFocusChanged { fs ->
-                            // 포커스 시 전체 선택 (바로 덮어쓰기)
-                            if (fs.isFocused) scope.launch {
-                                delay(80)
-                                val v = latestPart3
-                                actions.setPart3(v.copy(selection = TextRange(0, v.text.length)))
-                            }
-                        },
-                    decorationBox = { inner -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } },
-                )
-                Box(
-                    modifier = Modifier.width(52.dp).fillMaxHeight().background(c.fill).clickable {
-                        tick()
-                        val n = ((state.part3.text.toIntOrNull() ?: 0) + 1).coerceIn(0, 99)
-                        actions.setPart3(TextFieldValue(n.toString().padStart(2, '0')))
-                    },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Add, null, tint = c.ink, modifier = Modifier.size(26.dp)) }
+                decorationBox = { inner -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } },
+            )
+            // 번호 −/+ (장갑 착용 고려 56×72dp)
+            StepButton(Icons.Rounded.Remove) {
+                tick()
+                val n = ((state.part3.text.toIntOrNull() ?: 0) - 1).coerceIn(0, 99)
+                actions.setPart3(TextFieldValue(n.toString().padStart(2, '0')))
+            }
+            StepButton(Icons.Rounded.Add) {
+                tick()
+                val n = ((state.part3.text.toIntOrNull() ?: 0) + 1).coerceIn(0, 99)
+                actions.setPart3(TextFieldValue(n.toString().padStart(2, '0')))
             }
         }
     }
+}
+
+@Composable
+private fun StepButton(icon: ImageVector, onClick: () -> Unit) {
+    val c = AppTheme.colors
+    Box(
+        modifier = Modifier
+            .width(56.dp)
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(16.dp))
+            .background(c.fill)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, null, tint = c.ink, modifier = Modifier.size(28.dp)) }
 }
 
 // ---------- 프리셋 ----------
@@ -481,11 +489,11 @@ fun PresetRow(fullCode: String, onLoad: (String) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         presets.forEachIndexed { i, code ->
             val selected = code == fullCode
-            val shape = RoundedCornerShape(15.dp)
+            val shape = RoundedCornerShape(16.dp)
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(50.dp)
+                    .height(64.dp)
                     .glass(shape)
                     .then(
                         when {
@@ -500,7 +508,7 @@ fun PresetRow(fullCode: String, onLoad: (String) -> Unit) {
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(code, style = mono(15.sp), color = if (selected && !editMode) c.blue else c.ink, maxLines = 1)
+                Text(code, style = mono(17.sp), color = if (selected && !editMode) c.blue else c.ink, maxLines = 1)
             }
         }
     }
@@ -583,16 +591,17 @@ fun TagActionBar(state: TagState, actions: TagActions, floating: Boolean, modifi
                 }
             },
             opaque = true,
+            height = 44.dp,
         )
         Spacer(Modifier.height(10.dp))
         when {
-            state.isContinuous -> ActionButton(Icons.Rounded.Stop, t("btn_stop"), c.indigo) { actions.setContinuous(false) }
-            state.status == TagStatus.WRITING -> ActionButton(Icons.Rounded.Close, t("btn_cancel"), c.orange, tinted = true) { actions.cancelWrite() }
-            state.contSelected -> ActionButton(Icons.Rounded.AllInclusive, t("btn_cont_start"), c.indigo, code = fullCode) {
+            state.isContinuous -> ActionButton(Icons.Rounded.Stop, t("btn_stop"), c.indigo, height = 72.dp) { actions.setContinuous(false) }
+            state.status == TagStatus.WRITING -> ActionButton(Icons.Rounded.Close, t("btn_cancel"), c.orange, tinted = true, height = 72.dp) { actions.cancelWrite() }
+            state.contSelected -> ActionButton(Icons.Rounded.AllInclusive, t("btn_cont_start"), c.indigo, code = fullCode, height = 72.dp) {
                 actions.setContinuous(true)
                 actions.requestWrite(fullCode)
             }
-            else -> ActionButton(Icons.Rounded.Edit, t("btn_write"), c.blue, code = fullCode) { actions.requestWrite(fullCode) }
+            else -> ActionButton(Icons.Rounded.Edit, t("btn_write"), c.blue, code = fullCode, height = 72.dp) { actions.requestWrite(fullCode) }
         }
     }
 }

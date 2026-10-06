@@ -199,7 +199,6 @@ class MainActivity : ComponentActivity(), TagActions {
         registerReceiver(nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED))
         nfcAdapter?.let {
             tagState.nfcEnabled = it.isEnabled
-            if (!it.isEnabled) Toast.makeText(this, tr("t_ndis", isKor), Toast.LENGTH_LONG).show()
             it.enableForegroundDispatch(this, pendingIntent, null, null)
         }
     }
