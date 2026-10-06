@@ -50,7 +50,13 @@ shot() { sleep "${2:-1.5}"; adb exec-out screencap -p > "snaps/$1.png"; }
 adb install -r "$(ls app/build/outputs/apk/debug/*.apk | head -1)"
 adb shell am start -n $PKG/.MainActivity
 wait_text "태그" 60
-shot 01_start 2
+# 시작 시 업데이트 안내 (Release가 갱신 중이면 안 뜰 수 있음)
+if wait_text "업데이트가 있어요" 12; then
+  shot 01_update_dialog 0.5
+  tap_text "나중에"
+else
+  shot 01_start 0.5
+fi
 shot 02_tag_idle 0.5
 
 tap_text "쓰기"
@@ -119,5 +125,49 @@ tap_text "태그"
 shot 21_fold_twopane 2
 adb shell wm size reset
 adb shell wm density reset
+
+# ---------- 앱 내 업데이트 흐름 ----------
+PKG_V() { adb shell dumpsys package $PKG | grep -m1 versionCode | tr -s ' '; }
+echo "before: $(PKG_V)" > snaps/update_result.txt
+tap_text "설정"
+adb shell input swipe 540 1800 540 500 300; sleep 0.5; adb shell input swipe 540 1800 540 500 300
+sleep 1
+tap_text "업데이트 확인"
+if wait_text "업데이트가 있어요" 20; then
+  shot 22_update_dialog 0.5
+  tap_text "업데이트"
+  shot 23_update_downloading 0.3
+  # 처음에는 설치 허용이 꺼져 있음 → 안내 대화상자
+  if wait_text "설치 허용이 필요해요" 60; then
+    shot 24_update_need_permission 0.5
+    tap_text "설정 열기"
+    sleep 2
+    shot 25_unknown_sources 0.5
+    adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow
+    adb shell input keyevent KEYCODE_BACK
+  fi
+  # 돌아오면 시스템 설치 화면이 열림
+  for i in $(seq 1 30); do
+    dump
+    for b in "INSTALL" "Install" "설치" "UPDATE" "Update" "업데이트"; do
+      POS=$(find_text "$b"); [ -n "$POS" ] && break
+    done
+    [ -n "$POS" ] && grep -q "packageinstaller" ui.xml && break
+    POS=""; sleep 1
+  done
+  shot 26_installer 0.5
+  if [ -n "$POS" ]; then
+    adb shell input tap $POS
+    sleep 12
+    shot 27_after_install 0.5
+  else
+    echo "installer button not found" >> snaps/update_result.txt
+  fi
+else
+  shot 22_update_check_result 0.5
+  echo "update dialog not shown" >> snaps/update_result.txt
+fi
+echo "after: $(PKG_V)" >> snaps/update_result.txt
+adb logcat -d | grep -iE "AppUpdater|PackageInstaller|FileProvider" | tail -40 >> snaps/update_result.txt || true
 
 adb logcat -d -s AndroidRuntime:E > snaps/crash_logcat.txt || true

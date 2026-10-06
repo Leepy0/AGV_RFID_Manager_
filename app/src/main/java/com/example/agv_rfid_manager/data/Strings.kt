@@ -120,6 +120,31 @@ val Strings: Map<String, Array<String>> = mapOf(
     "s_reset_ok" to arrayOf("Reset", "초기화"),
     "s_info" to arrayOf("About", "정보"),
     "s_ver" to arrayOf("App version", "앱 버전"),
+    "s_ver_v" to arrayOf("v%s · build %d", "v%s · 빌드 %d"),
+
+    // 앱 내 업데이트
+    "s_upd" to arrayOf("Check for updates", "업데이트 확인"),
+    "s_upd_d" to arrayOf("Checks GitHub for a new version", "GitHub에서 새 버전 확인"),
+    "s_upd_chk" to arrayOf("Checking…", "확인 중…"),
+    "s_upd_latest" to arrayOf("You're up to date", "최신 버전이에요"),
+    "s_upd_new" to arrayOf("New version v%s · build %d", "새 버전 v%s · 빌드 %d"),
+    "s_upd_fail" to arrayOf("Check failed · check the network", "확인 실패 · 네트워크를 확인해 주세요"),
+    "upd_title" to arrayOf("Update available", "업데이트가 있어요"),
+    "upd_build" to arrayOf("build %d", "빌드 %d"),
+    "upd_cur" to arrayOf("Installed: v%s · build %d", "현재 v%s · 빌드 %d"),
+    "upd_now" to arrayOf("Update", "업데이트"),
+    "upd_later" to arrayOf("Later", "나중에"),
+    "upd_dl" to arrayOf("Downloading update", "업데이트 받는 중"),
+    "upd_dl_d" to arrayOf("The installer opens when the download finishes.", "다 받으면 설치 화면이 열려요."),
+    "upd_perm" to arrayOf("Allow installs", "설치 허용이 필요해요"),
+    "upd_perm_d" to arrayOf(
+        "Allow this app to install unknown apps. The installer opens as soon as you come back.",
+        "이 앱의 '출처를 알 수 없는 앱 설치'를 허용해 주세요. 허용하고 돌아오면 바로 설치 화면이 열려요.",
+    ),
+    "upd_perm_btn" to arrayOf("Open settings", "설정 열기"),
+    "upd_fail" to arrayOf("Update failed", "업데이트 실패"),
+    "upd_fail_d" to arrayOf("Check the network connection and try again.", "네트워크 연결을 확인하고 다시 시도해 주세요."),
+    "retry" to arrayOf("Retry", "다시 시도"),
     "c_empty" to arrayOf("No logs recorded.", "기록된 로그가 없습니다."),
 
     // 가이드

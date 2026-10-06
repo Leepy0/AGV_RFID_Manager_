@@ -57,6 +57,7 @@ import com.example.agv_rfid_manager.data.SettingsState
 import com.example.agv_rfid_manager.data.TagActions
 import com.example.agv_rfid_manager.data.TagState
 import com.example.agv_rfid_manager.data.loadCode
+import com.example.agv_rfid_manager.device.AppUpdater
 import com.example.agv_rfid_manager.ui.components.ConfirmDialog
 import com.example.agv_rfid_manager.ui.components.GlassTabBar
 import com.example.agv_rfid_manager.ui.components.noRippleClick
@@ -107,6 +108,8 @@ fun MainApp(
     else tabBarBottom + TAB_BAR_HEIGHT + 28.dp
 
     TagEffects(tag, actions, settings)
+    // 앱 내 업데이트: 시작 시 1회 확인 (프로세스당)
+    LaunchedEffect(Unit) { AppUpdater.autoCheck(context) }
     LaunchedEffect(sheet) { sheet?.let { lastSheet = it } }
     BackHandler(enabled = sheet != null) { sheet = null }
 
@@ -203,6 +206,8 @@ fun MainApp(
             }
         }
     }
+
+    UpdateDialogs()
 
     if (confirmClear) {
         ConfirmDialog(

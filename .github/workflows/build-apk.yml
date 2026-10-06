@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # versionCode = 커밋 수 (전체 이력 필요)
 
       - uses: actions/setup-java@v5
         with:
@@ -56,6 +58,20 @@ jobs:
           echo "path=$APK" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$APK")" >> "$GITHUB_OUTPUT"
 
+      # 앱 내 업데이트용 버전 정보 (versionCode는 build.gradle.kts와 같은 커밋 수)
+      - name: version.json 생성
+        id: ver
+        run: |
+          CODE=$(git rev-list --count HEAD)
+          NAME="${{ steps.apk.outputs.name }}"
+          VN=$(echo "$NAME" | sed -E 's/^AGV_RFID_Manager_v(.+)\.apk$/\1/')
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/latest-debug/${NAME}"
+          NOTES=$(git log -1 --pretty=%s | sed -E 's/ *\[snap\]//')
+          jq -n --argjson code "$CODE" --arg name "$VN" --arg url "$URL" --arg notes "$NOTES" \
+            '{versionCode: $code, versionName: $name, url: $url, notes: $notes}' > version.json
+          cat version.json
+          echo "::notice title=App version::v$VN build $CODE"
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.apk.outputs.name }}
@@ -67,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest-debug --cleanup-tag -y || true
-          gh release create latest-debug "${{ steps.apk.outputs.path }}" \
+          gh release create latest-debug "${{ steps.apk.outputs.path }}" version.json \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Latest debug build" \

@@ -3,7 +3,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "2.1.0"
+val appVersionName = "2.2.0"
+
+// versionCode = git 커밋 수 (PC·CI 빌드 모두 같은 값, 커밋마다 자동 증가 → 앱 내 업데이트 비교용)
+// CI는 checkout fetch-depth: 0 필요. git이 없으면 1
+val gitCommitCount: Int = try {
+    providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
+        .standardOutput.asText.get().trim().toInt()
+} catch (_: Exception) {
+    1
+}
 
 android {
     namespace = "com.example.agv_rfid_manager"
@@ -17,7 +26,8 @@ android {
         applicationId = "com.example.agv_rfid_manager"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
+        // 스냅샷 테스트용: -PversionCodeOverride=1 로 낮은 버전을 만들어 업데이트 흐름 확인
+        versionCode = providers.gradleProperty("versionCodeOverride").orNull?.toIntOrNull() ?: gitCommitCount
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

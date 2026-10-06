@@ -36,6 +36,7 @@ import com.example.agv_rfid_manager.data.TagStatus
 import com.example.agv_rfid_manager.data.ThemeMode
 import com.example.agv_rfid_manager.data.dataStore
 import com.example.agv_rfid_manager.data.tr
+import com.example.agv_rfid_manager.device.AppUpdater
 import com.example.agv_rfid_manager.device.CrashLogger
 import com.example.agv_rfid_manager.device.PerfMode
 import com.example.agv_rfid_manager.ui.MainApp
@@ -196,6 +197,7 @@ class MainActivity : ComponentActivity(), TagActions {
     // ---------- NFC ----------
     override fun onResume() {
         super.onResume()
+        AppUpdater.onResume(this)  // '이 출처 허용' 켜고 돌아오면 설치 화면 열기
         registerReceiver(nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED))
         nfcAdapter?.let {
             tagState.nfcEnabled = it.isEnabled
