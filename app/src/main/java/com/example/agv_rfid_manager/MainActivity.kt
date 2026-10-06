@@ -169,6 +169,7 @@ val Strings = mapOf(
     "m_stop" to arrayOf("STOP CONTINUOUS", "연속 쓰기 종료"),
     "m_write" to arrayOf("WRITE\n(Continuous)", "쓰기\n(연속)"),
     "m_cancel" to arrayOf("CANCEL WRITE", "쓰기 취소"),
+    "m_undo" to arrayOf("UNDO", "되돌리기"),
     "m_hist" to arrayOf("HISTORY", "히스토리"),
     "m_clr" to arrayOf("CLEAR ALL", "클리어"),
     "l_title" to arrayOf("Operation Logs", "전체 로그"),
@@ -278,7 +279,7 @@ data class ParamSaveData(val at: String, val id: String, val memo: String, val d
 
 @Composable
 fun MainApp(
-    currentTag: String, tagStatus: TagStatus, targetCode: String, historyList: List<String>,
+    currentTag: String, tagStatus: TagStatus, targetCode: String, prevCode: String, historyList: List<String>,
     isNfcEnabled: Boolean, isContinuousMode: Boolean, isKor: Boolean, isDarkMode: Boolean, cmdTypesStr: String, showHistory: Boolean,
     part1: TextFieldValue, onPart1Change: (TextFieldValue) -> Unit, part2: String, onPart2Change: (String) -> Unit, part3: TextFieldValue, onPart3Change: (TextFieldValue) -> Unit,
     onWriteRequested: (String) -> Unit, onContinuousToggled: (Boolean) -> Unit, onRevertToWriting: () -> Unit, onCancelWrite: () -> Unit, onTimeout: () -> Unit, onClearHistory: () -> Unit, onResetAll: () -> Unit
@@ -298,7 +299,7 @@ fun MainApp(
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                0 -> AGVControlScreen(currentTag, tagStatus, targetCode, historyList, isNfcEnabled, isContinuousMode, isKor, isDarkMode, cmdTypesStr.map { it.toString() }, showHistory, part1, onPart1Change, part2, onPart2Change, part3, onPart3Change, onWriteRequested, onContinuousToggled, onRevertToWriting, onCancelWrite, onTimeout, onClearHistory)
+                0 -> AGVControlScreen(currentTag, tagStatus, targetCode, prevCode, historyList, isNfcEnabled, isContinuousMode, isKor, isDarkMode, cmdTypesStr.map { it.toString() }, showHistory, part1, onPart1Change, part2, onPart2Change, part3, onPart3Change, onWriteRequested, onContinuousToggled, onRevertToWriting, onCancelWrite, onTimeout, onClearHistory)
                 1 -> ParamManagerScreen(isKor, isDarkMode)
                 2 -> GuideSensorTunerScreen(isKor, isDarkMode)
                 3 -> GuideScreen(isKor, isDarkMode)
@@ -995,6 +996,8 @@ class MainActivity : ComponentActivity() {
     private var targetWriteCode = mutableStateOf("")
     private var isNfcEnabled = mutableStateOf(false)
     private var isContinuousMode = mutableStateOf(false)
+    // 직전 쓰기 전의 태그 값 (되돌리기용)
+    private var prevWriteCode = mutableStateOf("")
 
     private var isVibEnabled = mutableStateOf(true)
     private var isSoundEnabled = mutableStateOf(true)
@@ -1072,7 +1075,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = colorScheme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     MainApp(
-                        currentTag = currentTagText.value, tagStatus = tagStatus.value, targetCode = targetWriteCode.value, historyList = historyList, isNfcEnabled = isNfcEnabled.value, isContinuousMode = isContinuousMode.value, isKor = isKor.value, isDarkMode = isDarkMode.value, cmdTypesStr = cmdTypesStr.value, showHistory = showHistory.value,
+                        currentTag = currentTagText.value, tagStatus = tagStatus.value, targetCode = targetWriteCode.value, prevCode = prevWriteCode.value, historyList = historyList, isNfcEnabled = isNfcEnabled.value, isContinuousMode = isContinuousMode.value, isKor = isKor.value, isDarkMode = isDarkMode.value, cmdTypesStr = cmdTypesStr.value, showHistory = showHistory.value,
                         part1 = part1State.value, onPart1Change = { v -> part1State.value = v; CoroutineScope(Dispatchers.IO).launch { RFIDStore.edit { it[PART1_KEY] = v.text } } },
                         part2 = part2State.value, onPart2Change = { v -> part2State.value = v; CoroutineScope(Dispatchers.IO).launch { RFIDStore.edit { it[PART2_KEY] = v } } },
                         part3 = part3State.value, onPart3Change = { v -> part3State.value = v; CoroutineScope(Dispatchers.IO).launch { RFIDStore.edit { it[PART3_KEY] = v.text } } },
@@ -1139,20 +1142,36 @@ class MainActivity : ComponentActivity() {
         val nfcV = NfcV.get(tag) ?: return
         try {
             nfcV.connect()
+            val readCmd = ByteArray(11).apply { this[0] = 0x22; this[1] = 0x20; System.arraycopy(tag.id, 0, this, 2, 8); this[10] = 0x00 }
+            val parseBlock = { res: ByteArray -> String(res.copyOfRange(1, res.size), Charsets.US_ASCII).replace(Regex("[^A-Za-z0-9]"), "").trim() }
+
+            // 쓰기 전 기존값 읽기 (실패해도 쓰기는 진행, 태그 이탈은 그대로 오류 처리)
+            val oldData: String? = try {
+                val r = nfcV.transceive(readCmd)
+                if (r != null && r.isNotEmpty() && r[0].toInt() == 0) parseBlock(r) else null
+            } catch (e: TagLostException) { throw e } catch (_: Exception) { null }
+            // 이력 표기: 기존 → 신규 (마지막 토큰이 신규값이어야 이력 클릭 시 코드 불러오기가 동작함)
+            val change = when {
+                oldData == null -> data
+                oldData == data -> "= $data"
+                else -> "${oldData.ifEmpty { "EMPTY" }} → $data"
+            }
+            // 되돌리기 대상: 정상 4자리 코드이고 값이 바뀐 경우만
+            val undoCode = if (oldData != null && oldData.length == 4 && oldData != data) oldData else ""
+
             val blockData = data.toByteArray(Charsets.US_ASCII).let { b -> ByteArray(4) { i -> if (i < b.size) b[i] else 0x20.toByte() } }
             val cmd = ByteArray(15).apply { this[0] = 0x22; this[1] = 0x21; System.arraycopy(tag.id, 0, this, 2, 8); this[10] = 0x00; System.arraycopy(blockData, 0, this, 11, 4) }
             val response = nfcV.transceive(cmd)
 
             if (response != null && response[0].toInt() == 0) {
                 if (isAutoVerifyEnabled.value) {
-                    val readCmd = ByteArray(11).apply { this[0] = 0x22; this[1] = 0x20; System.arraycopy(tag.id, 0, this, 2, 8); this[10] = 0x00 }
                     val readRes = nfcV.transceive(readCmd)
                     if (readRes != null && readRes[0].toInt() == 0) {
-                        val readData = String(readRes.copyOfRange(1, readRes.size), Charsets.US_ASCII).replace(Regex("[^A-Za-z0-9]"), "").trim()
-                        if (readData == data) { currentTagText.value = data; tagStatus.value = TagStatus.WRITE_SUCCESS; addHistoryEntry("[WRITE+VERIFY OK] : $data"); playFeedback(true)
+                        val readData = parseBlock(readRes)
+                        if (readData == data) { currentTagText.value = data; prevWriteCode.value = undoCode; tagStatus.value = TagStatus.WRITE_SUCCESS; addHistoryEntry("[WRITE+VERIFY OK] : $change"); playFeedback(true)
                         } else { currentTagText.value = "VERIFY ERR"; tagStatus.value = TagStatus.ERROR; addHistoryEntry("[VERIFY ERR] : $data != $readData"); playFeedback(false) }
                     } else { currentTagText.value = "VERIFY ERR"; tagStatus.value = TagStatus.ERROR; playFeedback(false) }
-                } else { currentTagText.value = data; tagStatus.value = TagStatus.WRITE_SUCCESS; addHistoryEntry("[WRITE OK] : $data"); playFeedback(true) }
+                } else { currentTagText.value = data; prevWriteCode.value = undoCode; tagStatus.value = TagStatus.WRITE_SUCCESS; addHistoryEntry("[WRITE OK] : $change"); playFeedback(true) }
             } else { tagStatus.value = TagStatus.ERROR; playFeedback(false) }
         } catch (e: Exception) {
             if (e !is TagLostException) CrashLogger.write(this, "WARN nfc write", e)
@@ -1250,7 +1269,7 @@ fun HistoryItemRow(item: String, cmdTypes: List<String>, isDarkMode: Boolean, on
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AGVControlScreen(currentTag: String, tagStatus: TagStatus, targetCode: String, historyList: List<String>, isNfcEnabled: Boolean, isContinuousMode: Boolean, isKor: Boolean, isDarkMode: Boolean, cmdTypes: List<String>, showHistory: Boolean, part1: TextFieldValue, onPart1Change: (TextFieldValue) -> Unit, part2: String, onPart2Change: (String) -> Unit, part3: TextFieldValue, onPart3Change: (TextFieldValue) -> Unit, onWriteRequested: (String) -> Unit, onContinuousToggled: (Boolean) -> Unit, onRevertToWriting: () -> Unit, onCancelWrite: () -> Unit, onTimeout: () -> Unit, onClearHistory: () -> Unit) {
+fun AGVControlScreen(currentTag: String, tagStatus: TagStatus, targetCode: String, prevCode: String, historyList: List<String>, isNfcEnabled: Boolean, isContinuousMode: Boolean, isKor: Boolean, isDarkMode: Boolean, cmdTypes: List<String>, showHistory: Boolean, part1: TextFieldValue, onPart1Change: (TextFieldValue) -> Unit, part2: String, onPart2Change: (String) -> Unit, part3: TextFieldValue, onPart3Change: (TextFieldValue) -> Unit, onWriteRequested: (String) -> Unit, onContinuousToggled: (Boolean) -> Unit, onRevertToWriting: () -> Unit, onCancelWrite: () -> Unit, onTimeout: () -> Unit, onClearHistory: () -> Unit) {
     val context = LocalContext.current; val coroutineScope = rememberCoroutineScope(); val focusManager = LocalFocusManager.current; var isAlphabetMenuExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(cmdTypes) { if (part2 !in cmdTypes && cmdTypes.isNotEmpty()) onPart2Change(cmdTypes.first()) }
     val presetKeys = remember { (1..5).map { stringPreferencesKey("preset_$it") } }
@@ -1274,7 +1293,17 @@ fun AGVControlScreen(currentTag: String, tagStatus: TagStatus, targetCode: Strin
     // 상단 여백 제거 (Scaffold innerPadding에 상태바 inset이 이미 포함됨 → statusBarsPadding 중복 제거)
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 20.dp).pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) { Row(verticalAlignment = Alignment.CenterVertically) { Text(text = if (isNfcEnabled) tr("m_on", isKor) else tr("m_off", isKor), fontWeight = FontWeight.Bold, color = if (isNfcEnabled) (if(isDarkMode) Color(0xFF66BB6A) else Color(0xFF388E3C)) else (if(isDarkMode) Color(0xFFEF5350) else Color.Red), style = MONO_STYLE, fontSize = 20.sp, maxLines = 1, softWrap = false); Spacer(modifier = Modifier.width(12.dp)); Icon(Icons.Default.HelpOutline, contentDescription = "Help", tint = Color.Gray, modifier = Modifier.size(36.dp).clickable { showHelpDialog = true }) } }
-        Card(modifier = Modifier.fillMaxWidth().height(270.dp).clickable(enabled = tagStatus == TagStatus.READ_SUCCESS || tagStatus == TagStatus.WRITE_SUCCESS) { updateInputParts(currentTag) }, colors = CardDefaults.cardColors(containerColor = cardBgColor)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(16.dp)) { Text(text = displayText, color = cardTextColor, fontSize = if (displayText.contains("\n")) 40.sp else 80.sp, style = MONO_STYLE, textAlign = TextAlign.Center, lineHeight = if (displayText.contains("\n")) 48.sp else 80.sp) } }
+        Card(modifier = Modifier.fillMaxWidth().height(270.dp).clickable(enabled = tagStatus == TagStatus.READ_SUCCESS || tagStatus == TagStatus.WRITE_SUCCESS) { updateInputParts(currentTag) }, colors = CardDefaults.cardColors(containerColor = cardBgColor)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Text(text = displayText, color = cardTextColor, fontSize = if (displayText.contains("\n")) 40.sp else 80.sp, style = MONO_STYLE, textAlign = TextAlign.Center, lineHeight = if (displayText.contains("\n")) 48.sp else 80.sp)
+            // 쓰기 성공 후 기존값으로 되돌리기 (해당 값으로 쓰기 대기 진입 → 같은 태그에 다시 대기)
+            if (!isContinuousMode && tagStatus == TagStatus.WRITE_SUCCESS && prevCode.isNotEmpty()) {
+                TextButton(onClick = { onWriteRequested(prevCode) }, modifier = Modifier.align(Alignment.BottomCenter)) {
+                    Icon(Icons.Default.Undo, contentDescription = null, tint = cardTextColor, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("${tr("m_undo", isKor)} ($prevCode)", color = cardTextColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        } }
         Spacer(modifier = Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth().height(90.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             StyledBasicTextField(value = part1, onValueChange = { input -> val f = input.text.filter { it.isDigit() || it in 'A'..'F' || it in 'a'..'f' }.uppercase(); onPart1Change(input.copy(text = if (f.isNotEmpty()) f.last().toString() else "", selection = TextRange(if (f.isNotEmpty()) 1 else 0))) }, modifier = Modifier.weight(1f).fillMaxHeight(), coroutineScope = coroutineScope, isDarkMode = isDarkMode, keyboardType = KeyboardType.Text)
