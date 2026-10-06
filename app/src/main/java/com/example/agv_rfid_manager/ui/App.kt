@@ -105,7 +105,7 @@ fun MainApp(
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val tabBarBottom = navBottom + 12.dp
     val contentBottom = if (tab == 0 && !twoPane) tabBarBottom + TAB_BAR_HEIGHT + 10.dp + ACTION_BAR_HEIGHT + 12.dp
-    else tabBarBottom + TAB_BAR_HEIGHT + 12.dp
+    else tabBarBottom + TAB_BAR_HEIGHT + 28.dp
 
     TagEffects(tag, actions, settings)
     LaunchedEffect(tag.nfcEnabled) { if (tag.nfcEnabled) nfcDismissed = false }
