@@ -149,6 +149,11 @@ val Strings = mapOf(
     "s_clear_d" to arrayOf("Delete all operation logs permanently", "모든 작업 기록을 영구적으로 삭제합니다"),
     "s_clr_title" to arrayOf("Reset Everything", "전체 초기화"),
     "s_clr_desc" to arrayOf("All operation logs and settings will be reset. Continue?", "모든 작업 기록이 삭제되며 설정값도 모두 초기화됩니다. 계속하시겠습니까?"),
+    "s_crash" to arrayOf("Crash Log", "크래시 로그"),
+    "s_crash_d" to arrayOf("View/share logs of unexpected exits and errors", "비정상 종료·오류 기록 확인 및 공유"),
+    "c_empty" to arrayOf("No logs recorded.", "기록된 로그가 없습니다."),
+    "c_share" to arrayOf("SHARE", "공유"),
+    "c_del" to arrayOf("DELETE", "삭제"),
     "s_ver" to arrayOf("App Version", "앱 버전"),
     "s_conn" to arrayOf("Connection", "연결 관리"),
     "s_usb" to arrayOf("USB Serial Info", "USB 시리얼 정보"),
@@ -871,6 +876,37 @@ fun AppSettingsScreen(isKor: Boolean, isDarkMode: Boolean, cmdTypesStr: String, 
 
     val usbManager = remember { context.getSystemService(Context.USB_SERVICE) as UsbManager }
     var showUsbInfoDialog by remember { mutableStateOf(false) }
+    var crashLogText by remember { mutableStateOf<String?>(null) }
+
+    // 크래시 로그 조회 다이얼로그
+    crashLogText?.let { log ->
+        AlertDialog(
+            onDismissRequest = { crashLogText = null },
+            title = { Text(tr("s_crash", isKor), fontWeight = FontWeight.Bold, color = if (isDarkMode) Color.White else Color.Black) },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                    Text(if (log.isEmpty()) tr("c_empty", isKor) else log, fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 14.sp, color = if (isDarkMode) Color.LightGray else Color.DarkGray)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = log.isNotEmpty(), onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, "AGV RFID Manager crash log")
+                        putExtra(Intent.EXTRA_TEXT, log)
+                    }
+                    context.startActivity(Intent.createChooser(send, null))
+                }) { Text(tr("c_share", isKor)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(enabled = log.isNotEmpty(), onClick = { CrashLogger.clear(context); crashLogText = "" }) { Text(tr("c_del", isKor), color = if (log.isNotEmpty()) Color.Red else Color.Gray) }
+                    TextButton(onClick = { crashLogText = null }) { Text(tr("d_cls", isKor)) }
+                }
+            },
+            containerColor = if (isDarkMode) Color(0xFF424242) else MaterialTheme.colorScheme.surface
+        )
+    }
 
     if (showUsbInfoDialog) {
         AlertDialog(
@@ -947,6 +983,7 @@ fun AppSettingsScreen(isKor: Boolean, isDarkMode: Boolean, cmdTypesStr: String, 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = if (isDarkMode) Color(0xFF444444) else Color.LightGray)
         Text(tr("s_data", isKor), color = Color.Gray, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
         ListItem(headlineContent = { Text(tr("s_clear", isKor), color = if (isDarkMode) Color.White else Color.Black) }, supportingContent = { Text(tr("s_clear_d", isKor), color = if (isDarkMode) Color.LightGray else Color.DarkGray) }, trailingContent = { Icon(Icons.Default.Delete, contentDescription = "Clear", tint = Color.Red, modifier = Modifier.size(48.dp)) }, modifier = Modifier.clickable { showClearConfirmDialog = true }, colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+        ListItem(headlineContent = { Text(tr("s_crash", isKor), color = if (isDarkMode) Color.White else Color.Black) }, supportingContent = { Text(tr("s_crash_d", isKor), color = if (isDarkMode) Color.LightGray else Color.DarkGray) }, trailingContent = { Icon(Icons.Default.BugReport, contentDescription = "Crash Log", tint = if (isDarkMode) Color.White else Color.Black) }, modifier = Modifier.clickable { crashLogText = CrashLogger.read(context) }, colors = ListItemDefaults.colors(containerColor = Color.Transparent))
     }
 }
 
@@ -973,6 +1010,7 @@ class MainActivity : ComponentActivity() {
 
     private val historyList = mutableStateListOf<String>()
     private val HISTORY_KEY = stringPreferencesKey("history_data")
+    private var toneGenerator: ToneGenerator? = null
 
     private val nfcStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -983,6 +1021,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        CrashLogger.install(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -1052,7 +1091,9 @@ class MainActivity : ComponentActivity() {
     private fun addHistoryEntry(entry: String) {
         historyList.add(0, "[${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}] $entry")
         if (historyList.size > 100) historyList.removeAt(historyList.lastIndex)
-        CoroutineScope(Dispatchers.IO).launch { RFIDStore.edit { it[HISTORY_KEY] = historyList.joinToString("|") } }
+        // 메인 스레드에서 문자열로 복사 후 저장 (IO 스레드에서 리스트 순회 중 수정 → ConcurrentModificationException 방지)
+        val snapshot = historyList.joinToString("|")
+        CoroutineScope(Dispatchers.IO).launch { RFIDStore.edit { it[HISTORY_KEY] = snapshot } }
     }
 
     override fun onResume() {
@@ -1087,7 +1128,11 @@ class MainActivity : ComponentActivity() {
                 val textData = String(response.copyOfRange(1, response.size), Charsets.US_ASCII).replace(Regex("[^A-Za-z0-9]"), "").trim()
                 currentTagText.value = textData; tagStatus.value = TagStatus.READ_SUCCESS; addHistoryEntry("[READ] Data : $textData"); playFeedback(true)
             } else { tagStatus.value = TagStatus.ERROR; playFeedback(false) }
-        } catch (e: Exception) { currentTagText.value = tr("e_comm", isKor.value); tagStatus.value = TagStatus.ERROR; playFeedback(false) } finally { try { nfcV.close() } catch (_: Exception) {} }
+        } catch (e: Exception) {
+            // 태그 이탈(TagLost)은 정상 상황이라 제외하고 기록
+            if (e !is TagLostException) CrashLogger.write(this, "WARN nfc read", e)
+            currentTagText.value = tr("e_comm", isKor.value); tagStatus.value = TagStatus.ERROR; playFeedback(false)
+        } finally { try { nfcV.close() } catch (_: Exception) {} }
     }
 
     private fun writeAndVerifyTag(tag: Tag, data: String) {
@@ -1109,16 +1154,81 @@ class MainActivity : ComponentActivity() {
                     } else { currentTagText.value = "VERIFY ERR"; tagStatus.value = TagStatus.ERROR; playFeedback(false) }
                 } else { currentTagText.value = data; tagStatus.value = TagStatus.WRITE_SUCCESS; addHistoryEntry("[WRITE OK] : $data"); playFeedback(true) }
             } else { tagStatus.value = TagStatus.ERROR; playFeedback(false) }
-        } catch (e: Exception) { currentTagText.value = tr("m_err", isKor.value); tagStatus.value = TagStatus.ERROR; playFeedback(false) } finally { try { nfcV.close() } catch (_: Exception) {} }
+        } catch (e: Exception) {
+            if (e !is TagLostException) CrashLogger.write(this, "WARN nfc write", e)
+            currentTagText.value = tr("m_err", isKor.value); tagStatus.value = TagStatus.ERROR; playFeedback(false)
+        } finally { try { nfcV.close() } catch (_: Exception) {} }
     }
 
     private fun playFeedback(isSuccess: Boolean) {
+        // 피드백 실패가 앱 종료로 이어지지 않도록 예외 차단 (catch 블록에서 재호출되는 경우 포함)
         if (isVibEnabled.value) {
-            val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-            val duration = if (isSuccess) 100L else 1000L
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)) else @Suppress("DEPRECATION") vibrator.vibrate(duration)
+            try {
+                val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+                val duration = if (isSuccess) 100L else 1000L
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)) else @Suppress("DEPRECATION") vibrator.vibrate(duration)
+            } catch (e: Exception) { CrashLogger.write(this, "WARN vibrate", e) }
         }
-        if (isSoundEnabled.value) ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100).startTone(if (isSuccess) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_CDMA_ABBR_ALERT, 200)
+        if (isSoundEnabled.value) {
+            try {
+                // ToneGenerator 1개 재사용 (매번 생성하면 오디오 트랙이 누적되어 생성자에서 RuntimeException 발생)
+                val tg = toneGenerator ?: ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100).also { toneGenerator = it }
+                tg.startTone(if (isSuccess) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_CDMA_ABBR_ALERT, 200)
+            } catch (e: Exception) {
+                CrashLogger.write(this, "WARN tone", e)
+                try { toneGenerator?.release() } catch (_: Exception) {}
+                toneGenerator = null
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        try { toneGenerator?.release() } catch (_: Exception) {}
+        toneGenerator = null
+        super.onDestroy()
+    }
+}
+
+// 비정상 종료(미처리 예외) 시 스택 트레이스를 앱 내부 저장소에 기록
+object CrashLogger {
+    private const val FILE_NAME = "crash_log.txt"
+    private const val MAX_CHARS = 100_000
+    private var installed = false
+
+    fun install(context: Context) {
+        if (installed) return
+        installed = true
+        val appContext = context.applicationContext
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, e ->
+            try { write(appContext, "CRASH [${thread.name}]", e) } catch (_: Throwable) {}
+            // 기존 핸들러로 넘겨서 정상적인 종료 처리
+            defaultHandler?.uncaughtException(thread, e)
+        }
+    }
+
+    @Synchronized
+    fun write(context: Context, title: String, e: Throwable) {
+        try {
+            val file = java.io.File(context.filesDir, FILE_NAME)
+            val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            val ver = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName } catch (_: Exception) { "?" }
+            val sw = java.io.StringWriter()
+            e.printStackTrace(java.io.PrintWriter(sw))
+            val entry = "===== $time $title =====\nv$ver / ${Build.MANUFACTURER} ${Build.MODEL} / Android ${Build.VERSION.RELEASE}\n$sw\n"
+            val old = if (file.exists()) file.readText() else ""
+            // 최신 기록이 위로, 최대 크기 유지
+            file.writeText((entry + old).take(MAX_CHARS))
+        } catch (_: Throwable) {}
+    }
+
+    fun read(context: Context): String {
+        val file = java.io.File(context.filesDir, FILE_NAME)
+        return try { if (file.exists()) file.readText() else "" } catch (_: Exception) { "" }
+    }
+
+    fun clear(context: Context) {
+        try { java.io.File(context.filesDir, FILE_NAME).delete() } catch (_: Exception) {}
     }
 }
 
@@ -1146,6 +1256,8 @@ fun AGVControlScreen(currentTag: String, tagStatus: TagStatus, targetCode: Strin
     val presetKeys = remember { (1..5).map { stringPreferencesKey("preset_$it") } }
     val presets by remember(context) { context.dataStore.data.map { prefs -> presetKeys.map { prefs[it] ?: "0T00" } } }.collectAsState(initial = listOf("0T01", "0T04", "0T07", "0T21", "0T22"))
     val currentFullCode = "${part1.text}$part2${part3.text.padStart(2, '0')}"
+    // pointerInput 내부 롱프레스에서 항상 최신 입력값을 참조하도록 함 (이전 값 캡처 방지)
+    val latestFullCode by rememberUpdatedState(currentFullCode)
     var showHelpDialog by remember { mutableStateOf(false) }; var showNfcDialog by remember { mutableStateOf(false) }; var showHistoryDialog by remember { mutableStateOf(false) }; var showClearConfirmDialog by remember { mutableStateOf(false) }
     LaunchedEffect(isNfcEnabled) { showNfcDialog = !isNfcEnabled }
     LaunchedEffect(currentFullCode) { if (isContinuousMode) onWriteRequested(currentFullCode) }
@@ -1159,7 +1271,8 @@ fun AGVControlScreen(currentTag: String, tagStatus: TagStatus, targetCode: Strin
     if (showHelpDialog) AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text(tr("g_guide", isKor), fontWeight = FontWeight.Bold, color = if (isDarkMode) Color.White else Color.Black) }, text = { LazyColumn(modifier = Modifier.fillMaxWidth()) { item { Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) { Text(tr("g_tag", isKor), fontWeight = FontWeight.Bold, color = if (isDarkMode) Color.LightGray else Color.DarkGray, modifier = Modifier.weight(1f)); Text(tr("g_func", isKor), fontWeight = FontWeight.Bold, color = if (isDarkMode) Color.LightGray else Color.DarkGray, modifier = Modifier.weight(2f)) }; HorizontalDivider(color = if(isDarkMode) Color.DarkGray else Color.LightGray) }; items(getCommands(isKor)) { (tag, desc) -> Row(modifier = Modifier.fillMaxWidth().clickable { updateInputParts(tag); showHelpDialog = false }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) { Text(tag, style = MONO_STYLE, fontSize = 28.sp, color = if (isDarkMode) Color.White else Color.Black, modifier = Modifier.weight(1f)); Text(desc, fontSize = 28.sp, color = if (isDarkMode) Color.White else Color.Black, modifier = Modifier.weight(2f), lineHeight = 32.sp) }; HorizontalDivider(thickness = 0.5.dp, color = if (isDarkMode) Color.DarkGray else Color.LightGray) } } }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(tr("d_cls", isKor)) } }, containerColor = if (isDarkMode) Color(0xFF424242) else MaterialTheme.colorScheme.surface)
     if (showHistoryDialog) Dialog(onDismissRequest = { showHistoryDialog = false }) { Surface(shape = RoundedCornerShape(12.dp), color = if (isDarkMode) Color(0xFF424242) else MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f)) { Column(modifier = Modifier.padding(16.dp)) { Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(tr("l_title", isKor), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = if (isDarkMode) Color.White else Color.Black); Text(text = tr("l_call", isKor), color = if (isDarkMode) Color(0xFFEF5350) else Color.Red, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showClearConfirmDialog = true }) }; if (historyList.isEmpty()) Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("l_empty", isKor), color = Color.Gray) } else LazyColumn(modifier = Modifier.fillMaxSize()) { items(historyList) { log -> Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = if (isDarkMode) Color(0xFF333333) else Color(0xFFF5F5F5))) { Box(modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center) { HistoryItemRow(log, cmdTypes, isDarkMode) { code -> updateInputParts(code); showHistoryDialog = false } } } } } } } }
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(horizontal = 24.dp, vertical = 20.dp).pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }, horizontalAlignment = Alignment.CenterHorizontally) {
+    // 상단 여백 제거 (Scaffold innerPadding에 상태바 inset이 이미 포함됨 → statusBarsPadding 중복 제거)
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 20.dp).pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) { Row(verticalAlignment = Alignment.CenterVertically) { Text(text = if (isNfcEnabled) tr("m_on", isKor) else tr("m_off", isKor), fontWeight = FontWeight.Bold, color = if (isNfcEnabled) (if(isDarkMode) Color(0xFF66BB6A) else Color(0xFF388E3C)) else (if(isDarkMode) Color(0xFFEF5350) else Color.Red), style = MONO_STYLE, fontSize = 20.sp, maxLines = 1, softWrap = false); Spacer(modifier = Modifier.width(12.dp)); Icon(Icons.Default.HelpOutline, contentDescription = "Help", tint = Color.Gray, modifier = Modifier.size(36.dp).clickable { showHelpDialog = true }) } }
         Card(modifier = Modifier.fillMaxWidth().height(270.dp).clickable(enabled = tagStatus == TagStatus.READ_SUCCESS || tagStatus == TagStatus.WRITE_SUCCESS) { updateInputParts(currentTag) }, colors = CardDefaults.cardColors(containerColor = cardBgColor)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(16.dp)) { Text(text = displayText, color = cardTextColor, fontSize = if (displayText.contains("\n")) 40.sp else 80.sp, style = MONO_STYLE, textAlign = TextAlign.Center, lineHeight = if (displayText.contains("\n")) 48.sp else 80.sp) } }
         Spacer(modifier = Modifier.height(24.dp))
@@ -1173,7 +1286,7 @@ fun AGVControlScreen(currentTag: String, tagStatus: TagStatus, targetCode: Strin
         Spacer(modifier = Modifier.height(20.dp))
         Surface(modifier = Modifier.fillMaxWidth().height(90.dp).combinedClickable(onClick = { if (isContinuousMode) { onContinuousToggled(false) } else if (tagStatus == TagStatus.WRITING) { onCancelWrite() } else { onWriteRequested(currentFullCode) } }, onLongClick = { if (!isContinuousMode) { onContinuousToggled(true); onWriteRequested(currentFullCode) } }), shape = RoundedCornerShape(8.dp), color = if (isContinuousMode || tagStatus == TagStatus.WRITING) (if(isDarkMode) Color(0xFFD84315) else Color(0xFFE64A19)) else (if(isDarkMode) Color(0xFF0D47A1) else MaterialTheme.colorScheme.primary)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(8.dp).fillMaxSize()) { val btnText = when { isContinuousMode -> tr("m_stop", isKor); tagStatus == TagStatus.WRITING -> tr("m_cancel", isKor); else -> tr("m_write", isKor) }; Text(text = btnText, color = Color.White, fontSize = if (isContinuousMode || tagStatus == TagStatus.WRITING) 20.sp else 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) } }
         Spacer(modifier = Modifier.height(24.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { presets.forEachIndexed { index, code -> Box(modifier = Modifier.weight(1f).aspectRatio(1f).background(if(isDarkMode) Color(0xFF424242) else Color(0xFFEEEEEE), RoundedCornerShape(4.dp)).pointerInput(code) { detectTapGestures(onTap = { updateInputParts(code) }, onLongPress = { if (currentFullCode.length == 4) { coroutineScope.launch { context.dataStore.edit { it[presetKeys[index]] = currentFullCode } }; Toast.makeText(context, "${tr("t_psav", isKor)} $currentFullCode", Toast.LENGTH_SHORT).show() } }) }, contentAlignment = Alignment.Center) { Text(code, color = if(isDarkMode) Color.White else Color.Black, style = MONO_STYLE, fontSize = 18.sp, textAlign = TextAlign.Center) } } }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { presets.forEachIndexed { index, code -> Box(modifier = Modifier.weight(1f).aspectRatio(1f).background(if(isDarkMode) Color(0xFF424242) else Color(0xFFEEEEEE), RoundedCornerShape(4.dp)).pointerInput(code) { detectTapGestures(onTap = { updateInputParts(code) }, onLongPress = { val codeToSave = latestFullCode; if (codeToSave.length == 4) { coroutineScope.launch { context.dataStore.edit { it[presetKeys[index]] = codeToSave } }; Toast.makeText(context, "${tr("t_psav", isKor)} $codeToSave", Toast.LENGTH_SHORT).show() } }) }, contentAlignment = Alignment.Center) { Text(code, color = if(isDarkMode) Color.White else Color.Black, style = MONO_STYLE, fontSize = 18.sp, textAlign = TextAlign.Center) } } }
         if (showHistory) { Spacer(modifier = Modifier.height(28.dp)); HorizontalDivider(modifier = Modifier.padding(bottom = 12.dp), color = if (isDarkMode) Color(0xFF444444) else Color.LightGray); Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(tr("m_hist", isKor), fontWeight = FontWeight.Bold, color = if(isDarkMode) Color(0xFF90CAF9) else Color.Blue, fontSize = 20.sp, modifier = Modifier.clickable { showHistoryDialog = true }); Text(text = tr("m_clr", isKor), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if(isDarkMode) Color(0xFFEF5350) else Color.Red, modifier = Modifier.clickable { showClearConfirmDialog = true }) }; Column(modifier = Modifier.fillMaxWidth()) { historyList.take(5).forEach { item -> HistoryItemRow(item, cmdTypes, isDarkMode, onClickCode = { updateInputParts(it) }) } } }
         Spacer(modifier = Modifier.height(20.dp))
     }

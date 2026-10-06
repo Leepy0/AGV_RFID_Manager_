@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ master, ci/build-apk ]
+    branches: [ master ]
   workflow_dispatch:   # Actions 탭에서 수동 실행
 
 permissions:

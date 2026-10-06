@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "1.7.0"
+val appVersionName = "1.7.1"
 
 android {
     namespace = "com.example.agv_rfid_manager"
