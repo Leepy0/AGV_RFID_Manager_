@@ -1,0 +1,63 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ master, ci/build-apk ]
+  workflow_dispatch:   # Actions 탭에서 수동 실행
+
+permissions:
+  contents: write      # Release 생성용
+
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # 고정 debug keystore 사용 → 빌드마다 서명이 같아서 덮어쓰기 설치 가능
+      - name: Debug keystore 설정
+        run: |
+          mkdir -p ~/.android
+          cp .github/debug.keystore ~/.android/debug.keystore
+
+      - name: 디버그 APK 빌드
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: APK 경로 확인
+        id: apk
+        run: |
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$APK")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.path }}
+
+      # 항상 같은 주소(latest-debug)로 최신 APK 덮어쓰기
+      - name: Release(latest-debug) 갱신
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest-debug --cleanup-tag -y || true
+          gh release create latest-debug "${{ steps.apk.outputs.path }}" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Latest debug build" \
+            --notes "branch: ${GITHUB_REF_NAME} / commit: ${GITHUB_SHA::7} / run #${GITHUB_RUN_NUMBER}"
