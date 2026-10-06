@@ -26,12 +26,7 @@ jobs:
       # Android SDK는 runner에 기본 설치됨 (부족한 platform은 AGP가 자동 다운로드)
       - uses: gradle/actions/setup-gradle@v4
 
-      # 고정 debug keystore 사용 → 빌드마다 서명이 같아서 덮어쓰기 설치 가능
-      - name: Debug keystore 설정
-        run: |
-          mkdir -p ~/.android
-          cp .github/debug.keystore ~/.android/debug.keystore
-
+      # debug 서명 키는 app/build.gradle.kts의 signingConfigs에서 app/debug.keystore로 고정
       - name: 디버그 APK 빌드
         run: |
           chmod +x gradlew

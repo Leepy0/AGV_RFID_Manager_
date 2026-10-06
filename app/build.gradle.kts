@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "1.7.2"
+val appVersionName = "1.7.3"
 
 android {
     namespace = "com.example.agv_rfid_manager"
@@ -21,6 +21,16 @@ android {
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // debug 서명 키 고정 (PC·CI 빌드 모두 같은 키 → 삭제 없이 업데이트 설치 가능)
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
