@@ -1,11 +1,87 @@
 package com.example.agv_rfid_manager.ui.theme
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// 색상 토큰 (라이트/다크 한 곳에서 정의)
+@Immutable
+data class AppColors(
+    val isDark: Boolean,
+    val bg: Color,
+    val ink: Color,
+    val ink2: Color,
+    val ink3: Color,
+    val solid: Color,
+    val glassThin: Color,
+    val glassReg: Color,
+    val glassThick: Color,
+    val hair: Color,
+    val line: Color,
+    val fill: Color,
+    val segOn: Color,
+    val blue: Color,
+    val green: Color,
+    val orange: Color,
+    val indigo: Color,
+    val red: Color,
+    val blob1: Color,
+    val blob2: Color,
+    val blob3: Color,
+    val oneBg: Color,
+    val oneCard: Color,
+    val oneBlue: Color,
+)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val LightColors = AppColors(
+    isDark = false,
+    bg = Color(0xFFEEF2F8),
+    ink = Color(0xFF0B1220),
+    ink2 = Color(0xFF5B6475),
+    ink3 = Color(0xFF98A1B2),
+    solid = Color.White,
+    glassThin = Color.White.copy(alpha = 0.55f),
+    glassReg = Color.White.copy(alpha = 0.72f),
+    glassThick = Color.White.copy(alpha = 0.88f),
+    hair = Color.White.copy(alpha = 0.85f),
+    line = Color(0x140F172A),
+    fill = Color(0x1F767680),
+    segOn = Color.White,
+    blue = Color(0xFF007AFF),
+    green = Color(0xFF34C759),
+    orange = Color(0xFFFF9500),
+    indigo = Color(0xFF5856D6),
+    red = Color(0xFFFF3B30),
+    blob1 = Color(0x8C60A5FA),
+    blob2 = Color(0x6B34D399),
+    blob3 = Color(0x66A78BFA),
+    oneBg = Color(0xFFF2F2F7),
+    oneCard = Color.White,
+    oneBlue = Color(0xFF3E91FF),
+)
+
+val DarkColors = AppColors(
+    isDark = true,
+    bg = Color(0xFF0B0F17),
+    ink = Color(0xFFF2F5FA),
+    ink2 = Color(0xFFA3ACBD),
+    ink3 = Color(0xFF6B7486),
+    solid = Color(0xFF1C222E),
+    glassThin = Color(0xFF1E2430).copy(alpha = 0.68f),
+    glassReg = Color(0xFF1E2430).copy(alpha = 0.74f),
+    glassThick = Color(0xFF1C222E).copy(alpha = 0.88f),
+    hair = Color.White.copy(alpha = 0.20f),
+    line = Color(0x14FFFFFF),
+    fill = Color(0x3D767680),
+    segOn = Color(0xFF3A4152),
+    blue = Color(0xFF0A84FF),
+    green = Color(0xFF30D158),
+    orange = Color(0xFFFF9F0A),
+    indigo = Color(0xFF5E5CE6),
+    red = Color(0xFFFF453A),
+    blob1 = Color(0x802563EB),
+    blob2 = Color(0x570D9488),
+    blob3 = Color(0x5C7C3AED),
+    oneBg = Color(0xFF0B0F17),
+    oneCard = Color(0xFF1A1F29),
+    oneBlue = Color(0xFF3E91FF),
+)

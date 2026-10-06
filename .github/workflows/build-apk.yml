@@ -42,6 +42,13 @@ jobs:
           MSG="${MSG//'%'/'%25'}"; MSG="${MSG//$'\n'/'%0A'}"; MSG="${MSG//$'\r'/'%0D'}"
           echo "::error title=Gradle build failed::$MSG"
 
+      # 동적 버전(1.+)으로 받은 라이브러리 실제 버전 기록
+      - name: 의존성 버전 기록
+        continue-on-error: true
+        run: |
+          V=$(./gradlew -q :app:dependencies --configuration debugRuntimeClasspath | grep -m1 -o "dev.chrisbanes.haze:haze:[^ ]*" || true)
+          echo "::notice title=Haze version::$V"
+
       - name: APK 경로 확인
         id: apk
         run: |

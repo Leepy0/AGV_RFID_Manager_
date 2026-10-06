@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "1.7.3"
+val appVersionName = "2.0.0"
 
 android {
     namespace = "com.example.agv_rfid_manager"
@@ -17,7 +17,7 @@ android {
         applicationId = "com.example.agv_rfid_manager"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -84,6 +84,6 @@ dependencies {
     // 2. Media3 (동영상 매뉴얼 팝업 기능)
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
-    // USB Serial 통신 라이브러리 추가
-    implementation("com.github.mik3y:usb-serial-for-android:3.8.0")
+    // Glass 배경 blur (Haze 1.x)
+    implementation("dev.chrisbanes.haze:haze:1.+")
 }

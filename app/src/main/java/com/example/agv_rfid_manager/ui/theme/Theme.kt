@@ -1,58 +1,57 @@
 package com.example.agv_rfid_manager.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.text.TextStyle
+import com.example.agv_rfid_manager.data.tr
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+val LocalAppColors = staticCompositionLocalOf { DarkColors }
+val LocalLowEffects = staticCompositionLocalOf { false }
+val LocalIsKor = staticCompositionLocalOf { true }
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+object AppTheme {
+    val colors: AppColors
+        @Composable @ReadOnlyComposable get() = LocalAppColors.current
+    val lowEffects: Boolean
+        @Composable @ReadOnlyComposable get() = LocalLowEffects.current
+}
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+// 현재 언어로 문자열 가져오기
+@Composable
+@ReadOnlyComposable
+fun t(key: String): String = tr(key, LocalIsKor.current)
 
 @Composable
-fun AGV_RFID_ManagerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+fun AppTheme(dark: Boolean, lowEffects: Boolean, isKor: Boolean, content: @Composable () -> Unit) {
+    val c = if (dark) DarkColors else LightColors
+    val scheme = if (dark) {
+        darkColorScheme(
+            primary = c.blue, background = c.bg, onBackground = c.ink,
+            surface = c.solid, onSurface = c.ink, surfaceContainer = c.solid,
+            onSurfaceVariant = c.ink2, outline = c.line,
+        )
+    } else {
+        lightColorScheme(
+            primary = c.blue, background = c.bg, onBackground = c.ink,
+            surface = c.solid, onSurface = c.ink, surfaceContainer = c.solid,
+            onSurfaceVariant = c.ink2, outline = c.line,
+        )
     }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalAppColors provides c,
+        LocalLowEffects provides lowEffects,
+        LocalIsKor provides isKor,
+    ) {
+        MaterialTheme(colorScheme = scheme, typography = AppTypography) {
+            ProvideTextStyle(TextStyle(fontFamily = Pretendard, color = c.ink)) {
+                content()
+            }
+        }
+    }
 }

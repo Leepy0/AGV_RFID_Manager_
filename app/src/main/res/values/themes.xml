@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.AGV_RFID_Manager" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- 기본 테마가 다크라서 시작 화면도 어두운 배경으로 -->
+    <style name="Theme.AGV_RFID_Manager" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/app_background</item>
+    </style>
 </resources>
