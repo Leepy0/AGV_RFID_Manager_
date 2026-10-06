@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -95,7 +96,7 @@ fun MainApp(
     var sheet by remember { mutableStateOf<SheetType?>(null) }
     var lastSheet by remember { mutableStateOf(SheetType.CODES) }
     var confirmClear by remember { mutableStateOf(false) }
-    var nfcDialog by remember { mutableStateOf(false) }
+    var nfcDismissed by rememberSaveable { mutableStateOf(false) }
     val hazeState = remember { HazeState() }
 
     // 폴드 펼침·태블릿: 너비·높이 모두 600dp 이상이면 2단
@@ -107,7 +108,7 @@ fun MainApp(
     else tabBarBottom + TAB_BAR_HEIGHT + 12.dp
 
     TagEffects(tag, actions, settings)
-    LaunchedEffect(tag.nfcEnabled) { nfcDialog = !tag.nfcEnabled }
+    LaunchedEffect(tag.nfcEnabled) { if (tag.nfcEnabled) nfcDismissed = false }
     LaunchedEffect(sheet) { sheet?.let { lastSheet = it } }
     BackHandler(enabled = sheet != null) { sheet = null }
 
@@ -123,6 +124,15 @@ fun MainApp(
                     1 -> GuideContent(contentBottom)
                     else -> SettingsContent(settings, autoLow, contentBottom, onResetAll)
                 }
+                // 떠 있는 탭바 뒤·아래로 비치는 본문을 배경색으로 서서히 가림
+                val fadeColor = if (tab == 2) c.oneBg else c.bg
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(tabBarBottom + TAB_BAR_HEIGHT + 28.dp)
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, fadeColor.copy(alpha = 0.92f), fadeColor))),
+                )
             }
 
             // 하단 액션 바 (1단 배치일 때만 떠 있음)
@@ -158,8 +168,8 @@ fun MainApp(
             ) {
                 Column(
                     Modifier
-                        .fillMaxWidth()
                         .then(if (twoPane) Modifier.widthIn(max = 640.dp) else Modifier)
+                        .fillMaxWidth()
                         .fillMaxHeight(0.74f)
                         .glass(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp), GlassLevel.THICK, floating = true)
                         .noRippleClick { }
@@ -206,13 +216,13 @@ fun MainApp(
             onDismiss = { confirmClear = false },
         )
     }
-    if (nfcDialog && tab == 0) {
+    if (!tag.nfcEnabled && !nfcDismissed && tab == 0) {
         ConfirmDialog(
             title = t("d_noff"),
             message = t("d_ndis"),
             confirmText = t("d_set"),
             onConfirm = { context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) },
-            onDismiss = { nfcDialog = false },
+            onDismiss = { nfcDismissed = true },
         )
     }
 }

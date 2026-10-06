@@ -291,8 +291,8 @@ fun AppDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 560.dp)
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(28.dp))
                     .background(c.oneCard)
                     .noRippleClick { }
