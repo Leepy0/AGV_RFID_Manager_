@@ -39,7 +39,7 @@ enum class CheckState { NONE, CHECKING, LATEST, AVAILABLE, FAILED }
 
 /**
  * 앱 내 업데이트.
- * - 시작 시 1회(프로세스당) 자동 확인, 설정에서 수동 확인
+ * - 앱이 앞으로 올 때마다 자동 확인 (10분 간격 제한), 설정에서 수동 확인
  * - API 대신 Release 다운로드 주소 사용 → GitHub API 호출 제한(IP당 60회/시간) 영향 없음
  * - 설치는 시스템 설치 화면에서 사용자가 [업데이트]를 눌러야 함 (무음 설치 불가)
  * - 화면 회전·폴드 전환에도 다운로드가 이어지도록 Activity 밖(object)에서 상태 보관
@@ -50,7 +50,8 @@ object AppUpdater {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null
-    private var autoChecked = false
+    private const val AUTO_INTERVAL_MS = 10 * 60 * 1000L
+    private var lastAutoCheck = 0L
 
     var step by mutableStateOf<UpdStep>(UpdStep.None)
         private set
@@ -65,10 +66,13 @@ object AppUpdater {
         0L
     }
 
-    // 앱 시작 시 자동 확인 (조용히: 실패·최신이면 아무것도 안 띄움)
+    // 자동 확인 (조용히: 실패·최신이면 아무것도 안 띄움)
+    // 백그라운드에 살아 있던 앱으로 돌아와도 확인하도록 onResume에서 호출, 10분 간격 제한
     fun autoCheck(ctx: Context) {
-        if (autoChecked) return
-        autoChecked = true
+        if (step != UpdStep.None) return
+        val now = System.currentTimeMillis()
+        if (now - lastAutoCheck < AUTO_INTERVAL_MS) return
+        lastAutoCheck = now
         checkNow(ctx.applicationContext, manual = false)
     }
 
@@ -122,6 +126,8 @@ object AppUpdater {
         val s = step
         if (s is UpdStep.NeedPermission && ctx.packageManager.canRequestPackageInstalls()) {
             install(ctx.applicationContext, s.info, s.file)
+        } else {
+            autoCheck(ctx)
         }
     }
 

@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity(), TagActions {
     // ---------- NFC ----------
     override fun onResume() {
         super.onResume()
-        AppUpdater.onResume(this)  // '이 출처 허용' 켜고 돌아오면 설치 화면 열기
+        AppUpdater.onResume(this)  // 업데이트 자동 확인, '이 출처 허용' 켜고 돌아오면 설치 화면 열기
         registerReceiver(nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED))
         nfcAdapter?.let {
             tagState.nfcEnabled = it.isEnabled

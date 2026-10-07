@@ -57,7 +57,6 @@ import com.example.agv_rfid_manager.data.SettingsState
 import com.example.agv_rfid_manager.data.TagActions
 import com.example.agv_rfid_manager.data.TagState
 import com.example.agv_rfid_manager.data.loadCode
-import com.example.agv_rfid_manager.device.AppUpdater
 import com.example.agv_rfid_manager.ui.components.ConfirmDialog
 import com.example.agv_rfid_manager.ui.components.GlassTabBar
 import com.example.agv_rfid_manager.ui.components.noRippleClick
@@ -91,7 +90,6 @@ fun MainApp(
     onResetAll: () -> Unit,
 ) {
     val c = AppTheme.colors
-    val context = LocalContext.current
     val focus = LocalFocusManager.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<SheetType?>(null) }
@@ -109,7 +107,6 @@ fun MainApp(
 
     TagEffects(tag, actions, settings)
     // 앱 내 업데이트: 시작 시 1회 확인 (프로세스당)
-    LaunchedEffect(Unit) { AppUpdater.autoCheck(context) }
     LaunchedEffect(sheet) { sheet?.let { lastSheet = it } }
     BackHandler(enabled = sheet != null) { sheet = null }
 
