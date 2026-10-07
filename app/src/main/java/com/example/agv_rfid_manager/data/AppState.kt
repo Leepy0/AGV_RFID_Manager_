@@ -16,9 +16,8 @@ class TagState {
     var prevCode by mutableStateOf("")        // 쓰기 전 기존값 (되돌리기용)
     var detail by mutableStateOf("")          // 부제: 변경 내역·오류 사유
     var errorTitle by mutableStateOf("")      // 오류 제목
-    var eventTime by mutableStateOf("")       // 읽기/쓰기 시각 (HH:mm)
+    var eventTime by mutableStateOf("")       // 읽기/쓰기 시각 (HH:mm:ss)
     var isContinuous by mutableStateOf(false) // 연속 쓰기 진행 중
-    var contSelected by mutableStateOf(false) // 액션 바에서 연속 쓰기 모드 선택
     var nfcEnabled by mutableStateOf(false)
     var part1 by mutableStateOf(TextFieldValue("0"))
     var part2 by mutableStateOf("T")

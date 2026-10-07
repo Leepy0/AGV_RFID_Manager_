@@ -5,7 +5,9 @@ package com.example.agv_rfid_manager.ui.components
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -180,6 +182,7 @@ fun TintChip(icon: ImageVector, text: String, color: Color, onClick: () -> Unit)
 }
 
 // 큰 실행 버튼 (쓰기·취소·연속 종료)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActionButton(
     icon: ImageVector,
@@ -189,6 +192,7 @@ fun ActionButton(
     code: String? = null,
     height: Dp = 56.dp,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val c = AppTheme.colors
@@ -202,7 +206,10 @@ fun ActionButton(
             .height(height)
             .clip(RoundedCornerShape(if (big) 22.dp else 19.dp))
             .background(bg)
-            .clickable { tick(); onClick() },
+            .combinedClickable(
+                onClick = { tick(); onClick() },
+                onLongClick = onLongClick?.let { lc -> { tick(); lc() } },
+            ),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {

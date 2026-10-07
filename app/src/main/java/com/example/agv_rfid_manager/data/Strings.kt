@@ -34,7 +34,6 @@ val Strings: Map<String, Array<String>> = mapOf(
     "st_err" to arrayOf("Error", "오류"),
     "verify_ok" to arrayOf("verified", "검증 OK"),
     "chip_undo" to arrayOf("Undo (%s)", "되돌리기 (%s)"),
-    "chip_load" to arrayOf("Load into input", "입력칸으로 불러오기"),
 
     // 오류
     "e_time" to arrayOf("TIMEOUT", "시간 초과"),
@@ -64,10 +63,7 @@ val Strings: Map<String, Array<String>> = mapOf(
     "h_boot" to arrayOf("App started", "앱 시작"),
 
     // 액션 바
-    "seg_one" to arrayOf("Single", "1회 쓰기"),
-    "seg_cont" to arrayOf("Continuous", "연속 쓰기"),
     "btn_write" to arrayOf("Write", "쓰기"),
-    "btn_cont_start" to arrayOf("Start", "연속 쓰기 시작"),
     "btn_cancel" to arrayOf("Cancel write", "쓰기 취소"),
     "btn_stop" to arrayOf("Stop continuous", "연속 쓰기 종료"),
 
@@ -155,7 +151,7 @@ val Strings: Map<String, Array<String>> = mapOf(
     "g_2" to arrayOf("Write", "쓰기"),
     "g_2_d" to arrayOf("1) Enter a code\n2) Press [Write]\n3) Hold your phone to the tag", "1) 코드 입력\n2) [쓰기] 누르기\n3) 휴대폰을 태그에 대기"),
     "g_3" to arrayOf("Continuous write", "연속 쓰기"),
-    "g_3_d" to arrayOf("1) Choose [Continuous]\n2) Press [Start]\n3) Hold your phone to tags one after another\n4) Press [Stop continuous] to finish", "1) [연속 쓰기] 선택\n2) [연속 쓰기 시작] 누르기\n3) 여러 태그에 차례로 대기\n4) [연속 쓰기 종료]로 끝내기"),
+    "g_3_d" to arrayOf("1) Long press [Write]\n2) Hold your phone to tags one after another\n3) Press [Stop continuous] to finish", "1) [쓰기] 버튼 길게 누르기\n2) 여러 태그에 차례로 대기\n3) [연속 쓰기 종료]로 끝내기"),
     "g_4" to arrayOf("Presets", "프리셋"),
     "g_4_d" to arrayOf("• Tap: load the code\n• [Edit] then tap a slot: save the current code\n• Long press also saves", "• 누르기: 코드 불러오기\n• [편집] 후 칸 누르기: 현재 코드 저장\n• 길게 눌러도 저장됩니다"),
     "g_5" to arrayOf("Undo", "되돌리기"),
