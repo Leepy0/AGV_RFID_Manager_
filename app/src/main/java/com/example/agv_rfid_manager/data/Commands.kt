@@ -43,7 +43,7 @@ val CODE_RE = Regex("[0-9A-F][A-Z][0-9]{2}")
 // 예) "[14:31:02] [WRITE+VERIFY OK] : 0T05 → 0T21", "[14:30:11] [READ] Data : 0T08", "[14:28:40] [시간 초과] 0T22"
 fun parseHistory(raw: String): HistItem {
     val m = HIST_RE.find(raw) ?: return HistItem("", HistKind.OTHER, raw, null)
-    val time = m.groupValues[1].take(5)
+    val time = m.groupValues[1]
     val tag = m.groupValues[2]
     val body = m.groupValues[3].trim().removePrefix("Data").trim().removePrefix(":").trim()
     val kind = when {

@@ -49,7 +49,6 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.LooksOne
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Nfc
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -111,7 +110,6 @@ import com.example.agv_rfid_manager.data.loadCode
 import com.example.agv_rfid_manager.data.parseHistory
 import com.example.agv_rfid_manager.ui.components.ActionButton
 import com.example.agv_rfid_manager.ui.components.SectionHeader
-import com.example.agv_rfid_manager.ui.components.Segmented
 import com.example.agv_rfid_manager.ui.components.TintChip
 import com.example.agv_rfid_manager.ui.components.rememberTick
 import com.example.agv_rfid_manager.ui.theme.AppTheme
@@ -249,6 +247,8 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
         }
     }
 
+    // 읽은 태그 카드를 누르면 입력칸으로 불러오기
+    val loadable = !nfcOff && !cont && s == TagStatus.READ_SUCCESS && state.currentTag.length >= 4
     val shape = RoundedCornerShape(28.dp)
     Column(
         modifier = Modifier
@@ -258,6 +258,7 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
             .clip(shape)
             .background(c.solid)
             .border(1.dp, color.copy(alpha = 0.5f), shape)
+            .then(if (loadable) Modifier.clickable { onLoad(state.currentTag) } else Modifier)
             .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -324,12 +325,8 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
                         Text(look.desc, fontSize = if (big) 17.sp else 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink2)
                     }
                 }
-                // 상태별 칩: 읽기 → 입력칸으로 불러오기, 쓰기 완료 → 되돌리기
-                if (!cont && s == TagStatus.READ_SUCCESS && state.currentTag.length >= 4) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        TintChip(Icons.Rounded.Edit, t("chip_load"), color) { onLoad(state.currentTag) }
-                    }
-                } else if (!cont && s == TagStatus.WRITE_SUCCESS && state.prevCode.isNotEmpty()) {
+                // 쓰기 완료 → 되돌리기 칩
+                if (!cont && s == TagStatus.WRITE_SUCCESS && state.prevCode.isNotEmpty()) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TintChip(Icons.Rounded.Undo, t("chip_undo").format(state.prevCode), color) { onUndo(state.prevCode) }
                     }
@@ -384,9 +381,17 @@ fun InputCard(state: TagState, actions: TagActions, cmdTypes: List<String>, onOp
                 modifier = Modifier.weight(1f).fillMaxHeight().then(boxMod),
                 decorationBox = { inner -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } },
             )
-            // 2번째 자리: 커맨드 타입 선택
+            // 2번째 자리: 커맨드 타입 선택 (I·O는 길게 누르면 서로 전환)
+            val ioSwap = when (state.part2) { "I" -> "O"; "O" -> "I"; else -> null }?.takeIf { it in cmdTypes }
             Box(
-                modifier = Modifier.weight(1f).fillMaxHeight().then(boxMod).clickable { menuOpen = true },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .then(boxMod)
+                    .combinedClickable(
+                        onClick = { menuOpen = true },
+                        onLongClick = ioSwap?.let { next -> { tick(); actions.setPart2(next) } },
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -572,37 +577,22 @@ fun HistoryRow(item: HistItem, onLoad: (String) -> Unit) {
     }
 }
 
-// ---------- 액션 바 (1회/연속 + 쓰기 버튼) ----------
+// ---------- 액션 바 (쓰기 버튼, 길게 누르면 연속 쓰기) ----------
 @Composable
 fun TagActionBar(state: TagState, actions: TagActions, floating: Boolean, modifier: Modifier = Modifier) {
     val c = AppTheme.colors
-    val tick = rememberTick()
     val fullCode = state.fullCode
     Column(modifier.fillMaxWidth().glass(RoundedCornerShape(30.dp), GlassLevel.REGULAR, floating).padding(10.dp)) {
-        Segmented(
-            options = listOf(Icons.Rounded.LooksOne to t("seg_one"), Icons.Rounded.AllInclusive to t("seg_cont")),
-            selected = if (state.contSelected || state.isContinuous) 1 else 0,
-            onSelect = { i ->
-                tick()
-                if (i == 1) {
-                    state.contSelected = true
-                } else {
-                    state.contSelected = false
-                    if (state.isContinuous) actions.setContinuous(false)
-                }
-            },
-            opaque = true,
-            height = 44.dp,
-        )
-        Spacer(Modifier.height(10.dp))
         when {
             state.isContinuous -> ActionButton(Icons.Rounded.Stop, t("btn_stop"), c.indigo, height = 72.dp) { actions.setContinuous(false) }
             state.status == TagStatus.WRITING -> ActionButton(Icons.Rounded.Close, t("btn_cancel"), c.orange, tinted = true, height = 72.dp) { actions.cancelWrite() }
-            state.contSelected -> ActionButton(Icons.Rounded.AllInclusive, t("btn_cont_start"), c.indigo, code = fullCode, height = 72.dp) {
-                actions.setContinuous(true)
-                actions.requestWrite(fullCode)
-            }
-            else -> ActionButton(Icons.Rounded.Edit, t("btn_write"), c.blue, code = fullCode, height = 72.dp) { actions.requestWrite(fullCode) }
+            else -> ActionButton(
+                Icons.Rounded.Edit, t("btn_write"), c.blue, code = fullCode, height = 72.dp,
+                onLongClick = {
+                    actions.setContinuous(true)
+                    actions.requestWrite(fullCode)
+                },
+            ) { actions.requestWrite(fullCode) }
         }
     }
 }

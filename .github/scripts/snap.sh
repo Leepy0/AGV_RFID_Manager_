@@ -45,6 +45,13 @@ tap_text() {
   if [ -n "$POS" ]; then adb shell input tap $POS; sleep 1.5; else echo "NOT FOUND: $1"; fi
 }
 
+# 길게 누르기 (같은 좌표로 swipe 700ms)
+long_text() {
+  dump
+  POS=$(find_text "$1")
+  if [ -n "$POS" ]; then adb shell input swipe $POS $POS 700; sleep 1.5; else echo "NOT FOUND: $1"; fi
+}
+
 shot() { sleep "${2:-1.5}"; adb exec-out screencap -p > "snaps/$1.png"; }
 
 adb install -r "$(ls app/build/outputs/apk/debug/*.apk | head -1)"
@@ -68,12 +75,9 @@ shot 05_code_sheet
 tap_text "우회전 90도"
 shot 06_after_pick
 
-tap_text "연속 쓰기"
-shot 07_cont_selected
-tap_text "연속 쓰기 시작"
+long_text "쓰기"
 shot 08_cont_running 0.5
 tap_text "연속 쓰기 종료"
-tap_text "1회 쓰기"
 
 tap_text "전체"
 shot 09_history_sheet

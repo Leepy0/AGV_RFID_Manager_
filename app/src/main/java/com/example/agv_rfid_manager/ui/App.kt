@@ -79,7 +79,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
 private val TAB_BAR_HEIGHT = 64.dp
-private val ACTION_BAR_HEIGHT = 146.dp  // 10 + 세그먼트 44 + 10 + 버튼 72 + 10
+private val ACTION_BAR_HEIGHT = 92.dp  // 10 + 버튼 72 + 10
 
 // 앱 루트: 배경(hazeSource) 위에 탭별 화면, 그 위에 떠 있는 액션 바·탭바·시트
 @Composable

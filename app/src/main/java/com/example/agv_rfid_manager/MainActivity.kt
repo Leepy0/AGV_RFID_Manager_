@@ -184,10 +184,10 @@ class MainActivity : ComponentActivity(), TagActions {
         }
     }
 
-    private fun now(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+    private fun now(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
     private fun addHistoryEntry(entry: String) {
-        tagState.history.add(0, "[${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}] $entry")
+        tagState.history.add(0, "[${now()}] $entry")
         if (tagState.history.size > 100) tagState.history.removeAt(tagState.history.lastIndex)
         // 메인 스레드에서 문자열로 복사 후 저장 (다른 스레드에서 리스트 순회 방지)
         val snapshot = tagState.history.joinToString("|")
