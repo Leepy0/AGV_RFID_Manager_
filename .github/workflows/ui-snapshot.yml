@@ -4,6 +4,12 @@ name: UI Snapshot
 # 수동 실행 또는 커밋 메시지에 [snap]이 있을 때만 실행
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: "캡처에 쓸 빌드 (debug / release — release는 R8 축소 빌드 검증용)"
+        type: choice
+        options: [debug, release]
+        default: debug
   push:
     branches: [ master ]
     # 문서·매뉴얼(docs/)만 바뀐 푸시는 빌드하지 않음 (앱 변경 없이 업데이트가 뜨는 것 방지)
@@ -46,7 +52,9 @@ jobs:
         run: |
           chmod +x gradlew
           # versionCode를 1로 낮춰 빌드 → 앱 내 업데이트 흐름(안내·다운로드·설치)까지 캡처
-          ./gradlew assembleDebug -PversionCodeOverride=1
+          BT="${{ github.event.inputs.build_type || 'debug' }}"
+          echo "::notice title=Build type::$BT"
+          ./gradlew "assemble${BT^}" -PversionCodeOverride=1
 
       - name: 에뮬레이터 실행 및 캡처
         uses: reactivecircus/android-emulator-runner@v2

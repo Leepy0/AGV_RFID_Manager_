@@ -78,7 +78,7 @@ sleep 3
 echo "locale: $(adb shell getprop persist.sys.locale)" > snaps/install_result.txt
 
 # ---------- 처음 설치 흐름: 파일 앱에서 APK를 눌러 설치 (출처 허용 → 설치 확인 → 완료) ----------
-APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+APK=$(ls app/build/outputs/apk/*/*.apk | head -1)   # debug 또는 release
 APK_NAME=$(basename "$APK")
 adb push "$APK" "/sdcard/Download/$APK_NAME"
 adb shell am start -a android.intent.action.VIEW -d "content://com.android.externalstorage.documents/document/primary%3ADownload" -t vnd.android.document/directory
