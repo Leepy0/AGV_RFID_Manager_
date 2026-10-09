@@ -16,7 +16,6 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -24,6 +23,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.lifecycleScope
 import com.example.agv_rfid_manager.data.Keys
@@ -41,8 +41,12 @@ import com.example.agv_rfid_manager.device.CrashLogger
 import com.example.agv_rfid_manager.device.PerfMode
 import com.example.agv_rfid_manager.ui.MainApp
 import com.example.agv_rfid_manager.ui.theme.AppTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -57,6 +61,12 @@ class MainActivity : ComponentActivity(), TagActions {
     private val settings = SettingsState()
 
     private val isKor get() = settings.isKor
+
+    // 입력칸 값은 바뀔 때마다가 아니라 화면을 떠날 때 한 번만 저장 (키 입력마다 파일 쓰기 방지)
+    private var partsDirty = false
+
+    // 태그 통신은 한 번에 하나씩 (연달아 두 번 감지돼도 겹치지 않게)
+    private val nfcMutex = Mutex()
 
     private val nfcStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -130,19 +140,15 @@ class MainActivity : ComponentActivity(), TagActions {
     }
 
     // ---------- TagActions ----------
-    override fun setPart1(v: TextFieldValue) {
-        tagState.part1 = v
-        lifecycleScope.launch { RFIDStore.edit { it[Keys.PART1] = v.text } }
-    }
+    override fun setPart1(v: TextFieldValue) { tagState.part1 = v; partsDirty = true }
+    override fun setPart2(v: String) { tagState.part2 = v; partsDirty = true }
+    override fun setPart3(v: TextFieldValue) { tagState.part3 = v; partsDirty = true }
 
-    override fun setPart2(v: String) {
-        tagState.part2 = v
-        lifecycleScope.launch { RFIDStore.edit { it[Keys.PART2] = v } }
-    }
-
-    override fun setPart3(v: TextFieldValue) {
-        tagState.part3 = v
-        lifecycleScope.launch { RFIDStore.edit { it[Keys.PART3] = v.text } }
+    private fun savePartsIfDirty() {
+        if (!partsDirty) return
+        partsDirty = false
+        val p1 = tagState.part1.text; val p2 = tagState.part2; val p3 = tagState.part3.text
+        lifecycleScope.launch { RFIDStore.edit { it[Keys.PART1] = p1; it[Keys.PART2] = p2; it[Keys.PART3] = p3 } }
     }
 
     override fun requestWrite(code: String) {
@@ -165,10 +171,7 @@ class MainActivity : ComponentActivity(), TagActions {
 
     override fun timeout() {
         addHistoryEntry("[${tr("e_time", isKor)}] ${tagState.targetCode}")
-        tagState.errorTitle = tr("err_time", isKor)
-        tagState.detail = tr("err_retry", isKor)
-        tagState.status = TagStatus.ERROR
-        playFeedback(false)
+        setError(tr("err_time", isKor), tr("err_retry", isKor))
     }
 
     override fun clearHistory() {
@@ -198,7 +201,7 @@ class MainActivity : ComponentActivity(), TagActions {
     override fun onResume() {
         super.onResume()
         AppUpdater.onResume(this)  // 업데이트 자동 확인, '이 출처 허용' 켜고 돌아오면 설치 화면 열기
-        registerReceiver(nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED))
+        ContextCompat.registerReceiver(this, nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
         nfcAdapter?.let {
             tagState.nfcEnabled = it.isEnabled
             it.enableForegroundDispatch(this, pendingIntent, null, null)
@@ -209,25 +212,59 @@ class MainActivity : ComponentActivity(), TagActions {
         super.onPause()
         unregisterReceiver(nfcStateReceiver)
         nfcAdapter?.disableForegroundDispatch(this)
+        savePartsIfDirty()
     }
 
+    // 태그 통신은 블로킹 I/O라 메인 스레드에서 하면 화면이 멈춤 → IO 스레드에서 처리하고 결과만 메인에 반영
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val tag: Tag? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val tag: Tag = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)
         } else {
             @Suppress("DEPRECATION") intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
-        }
-        tag?.let {
-            if (tagState.status == TagStatus.WRITING || tagState.isContinuous) writeAndVerifyTag(it, tagState.targetCode) else readTag(it)
+        }) ?: return
+        val writing = tagState.status == TagStatus.WRITING || tagState.isContinuous
+        val target = tagState.targetCode
+        val verify = settings.autoVerify
+        val kor = isKor
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                nfcMutex.withLock { if (writing) writeAndVerifyTag(tag, target, verify, kor) else readTag(tag, kor) }
+            }
+            applyResult(result)
         }
     }
 
-    private fun parseBlock(res: ByteArray): String =
-        String(res.copyOfRange(1, res.size), Charsets.US_ASCII).replace(Regex("[^A-Za-z0-9]"), "").trim()
+    // 태그 통신 결과 (IO 스레드에서 만들어 메인 스레드에서 상태에 반영)
+    private sealed interface TagResult {
+        data class Read(val code: String) : TagResult
+        data class Written(val code: String, val undoCode: String, val detail: String, val history: String) : TagResult
+        data class Failed(val title: String, val detail: String, val history: String? = null) : TagResult
+    }
 
-    private fun readCommand(tag: Tag) = ByteArray(11).apply {
-        this[0] = 0x22; this[1] = 0x20; System.arraycopy(tag.id, 0, this, 2, 8); this[10] = 0x00
+    private fun applyResult(r: TagResult) {
+        when (r) {
+            is TagResult.Read -> {
+                tagState.currentTag = r.code
+                tagState.eventTime = now()
+                tagState.status = TagStatus.READ_SUCCESS
+                addHistoryEntry("[READ] Data : ${r.code}")
+                playFeedback(true)
+            }
+            is TagResult.Written -> {
+                tagState.currentTag = r.code
+                tagState.prevCode = r.undoCode
+                tagState.detail = r.detail
+                tagState.eventTime = now()
+                tagState.status = TagStatus.WRITE_SUCCESS
+                addHistoryEntry(r.history)
+                playFeedback(true)
+            }
+            is TagResult.Failed -> {
+                r.history?.let { addHistoryEntry(it) }
+                setError(r.title, r.detail)
+            }
+        }
     }
 
     private fun setError(title: String, detail: String) {
@@ -238,40 +275,44 @@ class MainActivity : ComponentActivity(), TagActions {
         playFeedback(false)
     }
 
-    private fun readTag(tag: Tag) {
-        val nfcV = NfcV.get(tag) ?: return
-        try {
+    private fun parseBlock(res: ByteArray): String =
+        String(res.copyOfRange(1, res.size), Charsets.US_ASCII).replace(Regex("[^A-Za-z0-9]"), "").trim()
+
+    private fun readCommand(tag: Tag) = ByteArray(11).apply {
+        this[0] = 0x22; this[1] = 0x20; System.arraycopy(tag.id, 0, this, 2, 8); this[10] = 0x00
+    }
+
+    private fun ok(res: ByteArray?) = res != null && res.isNotEmpty() && res[0].toInt() == 0
+
+    private fun commError(e: Exception, where: String, kor: Boolean): TagResult {
+        // 태그 이탈(TagLost)은 정상 상황이라 제외하고 기록
+        if (e !is TagLostException) CrashLogger.write(this, where, e)
+        return TagResult.Failed(tr("err_comm", kor), if (e is TagLostException) tr("err_lost", kor) else tr("err_retry", kor))
+    }
+
+    private fun readTag(tag: Tag, kor: Boolean): TagResult {
+        val nfcV = NfcV.get(tag) ?: return TagResult.Failed(tr("err_unsupp", kor), tr("err_unsupp_d", kor))
+        return try {
             nfcV.connect()
             val response = nfcV.transceive(readCommand(tag))
-            if (response != null && response.isNotEmpty() && response[0].toInt() == 0) {
-                val textData = parseBlock(response)
-                tagState.currentTag = textData
-                tagState.eventTime = now()
-                tagState.status = TagStatus.READ_SUCCESS
-                addHistoryEntry("[READ] Data : $textData")
-                playFeedback(true)
-            } else {
-                setError(tr("err_read", isKor), tr("err_retry", isKor))
-            }
+            if (ok(response)) TagResult.Read(parseBlock(response)) else TagResult.Failed(tr("err_read", kor), tr("err_retry", kor))
         } catch (e: Exception) {
-            // 태그 이탈(TagLost)은 정상 상황이라 제외하고 기록
-            if (e !is TagLostException) CrashLogger.write(this, "WARN nfc read", e)
-            setError(tr("err_comm", isKor), if (e is TagLostException) tr("err_lost", isKor) else tr("err_retry", isKor))
+            commError(e, "WARN nfc read", kor)
         } finally {
             try { nfcV.close() } catch (_: Exception) {}
         }
     }
 
-    private fun writeAndVerifyTag(tag: Tag, data: String) {
-        val nfcV = NfcV.get(tag) ?: return
-        try {
+    private fun writeAndVerifyTag(tag: Tag, data: String, verify: Boolean, kor: Boolean): TagResult {
+        val nfcV = NfcV.get(tag) ?: return TagResult.Failed(tr("err_unsupp", kor), tr("err_unsupp_d", kor))
+        return try {
             nfcV.connect()
             val readCmd = readCommand(tag)
 
             // 쓰기 전 기존값 읽기 (실패해도 쓰기는 진행, 태그 이탈은 그대로 오류 처리)
             val oldData: String? = try {
                 val r = nfcV.transceive(readCmd)
-                if (r != null && r.isNotEmpty() && r[0].toInt() == 0) parseBlock(r) else null
+                if (ok(r)) parseBlock(r) else null
             } catch (e: TagLostException) {
                 throw e
             } catch (_: Exception) {
@@ -292,42 +333,25 @@ class MainActivity : ComponentActivity(), TagActions {
             }
             val response = nfcV.transceive(cmd)
 
-            if (response != null && response.isNotEmpty() && response[0].toInt() == 0) {
-                if (settings.autoVerify) {
+            when {
+                !ok(response) -> TagResult.Failed(tr("err_write", kor), tr("err_retry", kor))
+                !verify -> TagResult.Written(data, undoCode, change, "[WRITE OK] : $change")
+                else -> {
                     val readRes = nfcV.transceive(readCmd)
-                    if (readRes != null && readRes.isNotEmpty() && readRes[0].toInt() == 0) {
+                    if (ok(readRes)) {
                         val readData = parseBlock(readRes)
-                        if (readData == data) {
-                            writeDone(data, undoCode, "$change · ${tr("verify_ok", isKor)}", "[WRITE+VERIFY OK] : $change")
-                        } else {
-                            addHistoryEntry("[VERIFY ERR] : $data != $readData")
-                            setError(tr("err_verify", isKor), "$data ≠ ${readData.ifEmpty { "EMPTY" }}")
-                        }
+                        if (readData == data) TagResult.Written(data, undoCode, "$change · ${tr("verify_ok", kor)}", "[WRITE+VERIFY OK] : $change")
+                        else TagResult.Failed(tr("err_verify", kor), "$data ≠ ${readData.ifEmpty { "EMPTY" }}", "[VERIFY ERR] : $data != $readData")
                     } else {
-                        setError(tr("err_verify", isKor), tr("err_retry", isKor))
+                        TagResult.Failed(tr("err_verify", kor), tr("err_retry", kor))
                     }
-                } else {
-                    writeDone(data, undoCode, change, "[WRITE OK] : $change")
                 }
-            } else {
-                setError(tr("err_write", isKor), tr("err_retry", isKor))
             }
         } catch (e: Exception) {
-            if (e !is TagLostException) CrashLogger.write(this, "WARN nfc write", e)
-            setError(tr("err_comm", isKor), if (e is TagLostException) tr("err_lost", isKor) else tr("err_retry", isKor))
+            commError(e, "WARN nfc write", kor)
         } finally {
             try { nfcV.close() } catch (_: Exception) {}
         }
-    }
-
-    private fun writeDone(data: String, undoCode: String, detail: String, history: String) {
-        tagState.currentTag = data
-        tagState.prevCode = undoCode
-        tagState.detail = detail
-        tagState.eventTime = now()
-        tagState.status = TagStatus.WRITE_SUCCESS
-        addHistoryEntry(history)
-        playFeedback(true)
     }
 
     // ---------- 피드백 ----------
@@ -337,8 +361,7 @@ class MainActivity : ComponentActivity(), TagActions {
             try {
                 val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
                 val duration = if (isSuccess) 100L else 1000L
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-                else @Suppress("DEPRECATION") vibrator.vibrate(duration)
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
             } catch (e: Exception) {
                 CrashLogger.write(this, "WARN vibrate", e)
             }

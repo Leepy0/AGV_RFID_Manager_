@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.agv_rfid_manager.R
 import com.example.agv_rfid_manager.data.Keys
 import com.example.agv_rfid_manager.data.PerfSetting
 import com.example.agv_rfid_manager.data.RFIDStore
@@ -106,7 +108,7 @@ fun SettingsContent(settings: SettingsState, autoLow: Boolean, bottomPadding: Dp
         ) {
             Text(t("s_title"), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = c.ink)
             Spacer(Modifier.height(8.dp))
-            Text("AGV RFID Manager", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = c.ink2)
+            Text(stringResource(R.string.app_name), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = c.ink2)
         }
 
         OneGroup(t("s_screen")) {
@@ -196,7 +198,7 @@ fun SettingsContent(settings: SettingsState, autoLow: Boolean, bottomPadding: Dp
                     if (!empty) {
                         val send = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "AGV RFID Manager crash log")
+                            putExtra(Intent.EXTRA_SUBJECT, "${context.getString(R.string.app_name)} crash log")
                             putExtra(Intent.EXTRA_TEXT, crashText)
                         }
                         context.startActivity(Intent.createChooser(send, null))

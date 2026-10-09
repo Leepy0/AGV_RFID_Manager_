@@ -7,6 +7,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -126,6 +127,9 @@ enum class SheetType { CODES, HISTORY }
 
 private val DEFAULT_PRESETS = listOf("0T01", "0T04", "0T07", "0T21", "0T22")
 
+// 1회 쓰기 대기 시간 (초과 시 시간 초과 처리, 상태 카드의 남은 시간 막대와 같은 값)
+const val WRITE_TIMEOUT_MS = 5000L
+
 // 화면과 무관하게 항상 동작해야 하는 태그 로직 (연속 쓰기 복귀, 쓰기 대기 시간 초과 등)
 @Composable
 fun TagEffects(state: TagState, actions: TagActions, settings: SettingsState) {
@@ -143,7 +147,7 @@ fun TagEffects(state: TagState, actions: TagActions, settings: SettingsState) {
                 if (state.isContinuous) actions.revertToWriting()
             }
         } else if (state.status == TagStatus.WRITING) {
-            delay(5000)
+            delay(WRITE_TIMEOUT_MS)
             if (state.status == TagStatus.WRITING && !state.isContinuous) actions.timeout()
         }
     }
@@ -166,7 +170,11 @@ fun TagContent(
     val fullCode = state.fullCode
     val load: (String) -> Unit = { code -> loadCode(code, actions); focus.clearFocus() }
     val undo: (String) -> Unit = { code -> actions.requestWrite(code) }
-    val openNfc: () -> Unit = { context.startActivity(Intent(android.provider.Settings.ACTION_NFC_SETTINGS)) }
+    val openNfc: () -> Unit = {
+        // NFC 설정 화면이 없는 기기는 연결 설정 → 그마저 없으면 설정 앱
+        val tried = listOf(android.provider.Settings.ACTION_NFC_SETTINGS, android.provider.Settings.ACTION_WIRELESS_SETTINGS, android.provider.Settings.ACTION_SETTINGS)
+        tried.any { action -> try { context.startActivity(Intent(action)); true } catch (_: Exception) { false } }
+    }
     val clearFocusOnTap = Modifier.pointerInput(Unit) { detectTapGestures(onTap = { focus.clearFocus() }) }
 
     if (twoPane) {
@@ -249,6 +257,15 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
 
     // 읽은 태그 카드를 누르면 입력칸으로 불러오기
     val loadable = !nfcOff && !cont && s == TagStatus.READ_SUCCESS && state.currentTag.length >= 4
+
+    // 1회 쓰기 대기: 시간 초과까지 남은 시간이 줄어드는 막대
+    val waitLeft = remember { Animatable(1f) }
+    LaunchedEffect(s, cont) {
+        if (s == TagStatus.WRITING && !cont) {
+            waitLeft.snapTo(1f)
+            waitLeft.animateTo(0f, tween(WRITE_TIMEOUT_MS.toInt(), easing = LinearEasing))
+        }
+    }
     val shape = RoundedCornerShape(28.dp)
     Column(
         modifier = Modifier
@@ -325,9 +342,19 @@ fun StatusCard(state: TagState, onLoad: (String) -> Unit, onUndo: (String) -> Un
                         Text(look.desc, fontSize = if (big) 17.sp else 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink2)
                     }
                 }
-                // 쓰기 완료 → 되돌리기 칩
-                if (!cont && s == TagStatus.WRITE_SUCCESS && state.prevCode.isNotEmpty()) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // 카드 아래 한 줄: 읽기 완료 → 누르기 안내, 쓰기 대기 → 남은 시간 막대, 쓰기 완료 → 되돌리기 칩
+                when {
+                    loadable -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Edit, null, tint = color, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(t("st_read_hint"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = color)
+                    }
+                    !cont && s == TagStatus.WRITING -> Box(
+                        Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(color.copy(alpha = 0.18f)),
+                    ) {
+                        Box(Modifier.fillMaxWidth(waitLeft.value).fillMaxHeight().background(color))
+                    }
+                    !cont && s == TagStatus.WRITE_SUCCESS && state.prevCode.isNotEmpty() -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TintChip(Icons.Rounded.Undo, t("chip_undo").format(state.prevCode), color) { onUndo(state.prevCode) }
                     }
                 }
@@ -378,7 +405,14 @@ fun InputCard(state: TagState, actions: TagActions, cmdTypes: List<String>, onOp
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 cursorBrush = SolidColor(c.blue),
-                modifier = Modifier.weight(1f).fillMaxHeight().then(boxMod),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .then(boxMod)
+                    .onFocusChanged { fs ->
+                        // 비운 채로 떠나면 0으로 복구 (3자리 코드가 써지는 것 방지)
+                        if (!fs.isFocused && state.part1.text.isEmpty()) actions.setPart1(TextFieldValue("0"))
+                    },
                 decorationBox = { inner -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } },
             )
             // 2번째 자리: 커맨드 타입 선택 (I·O는 길게 누르면 서로 전환)
@@ -582,12 +616,14 @@ fun HistoryRow(item: HistItem, onLoad: (String) -> Unit) {
 fun TagActionBar(state: TagState, actions: TagActions, floating: Boolean, modifier: Modifier = Modifier) {
     val c = AppTheme.colors
     val fullCode = state.fullCode
+    val ready = fullCode.length == 4  // 첫째 자리가 비어 있으면 3자리 → 쓰기 막음
     Column(modifier.fillMaxWidth().glass(RoundedCornerShape(30.dp), GlassLevel.REGULAR, floating).padding(10.dp)) {
         when {
             state.isContinuous -> ActionButton(Icons.Rounded.Stop, t("btn_stop"), c.indigo, height = 72.dp) { actions.setContinuous(false) }
             state.status == TagStatus.WRITING -> ActionButton(Icons.Rounded.Close, t("btn_cancel"), c.orange, tinted = true, height = 72.dp) { actions.cancelWrite() }
             else -> ActionButton(
                 Icons.Rounded.Edit, t("btn_write"), c.blue, code = fullCode, height = 72.dp,
+                hint = t("btn_write_hint"), enabled = ready,
                 onLongClick = {
                     actions.setContinuous(true)
                     actions.requestWrite(fullCode)

@@ -1,7 +1,10 @@
 package com.example.agv_rfid_manager.data
 
-// 공통 태그 코드와 뜻
-fun getCommands(isKor: Boolean) = listOf(
+// 공통 태그 코드와 뜻 (언어별로 한 번만 만들어 재사용)
+fun getCommands(isKor: Boolean): List<Pair<String, String>> = if (isKor) commandsKor else commandsEng
+private val commandsKor by lazy { buildCommands(true) }
+private val commandsEng by lazy { buildCommands(false) }
+private fun buildCommands(isKor: Boolean) = listOf(
     "0T01" to if (isKor) "정지" else "Stop", "0T02" to if (isKor) "저속 주행" else "Low Speed",
     "0T03" to if (isKor) "초저속 주행" else "LLow Speed", "0T04" to if (isKor) "로딩" else "Loading",
     "0T05" to if (isKor) "고속 주행" else "Driving Speed", "0T07" to if (isKor) "언로딩" else "Unloading",

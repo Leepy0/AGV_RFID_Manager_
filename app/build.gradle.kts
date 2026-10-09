@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "2.4.0"
+val appVersionName = "2.5.0"
 
 // versionCode = git 커밋 수 (PC·CI 빌드 모두 같은 값, 커밋마다 자동 증가 → 앱 내 업데이트 비교용)
 // CI는 checkout fetch-depth: 0 필요. git이 없으면 1
@@ -45,6 +45,8 @@ android {
 
     buildTypes {
         release {
+            // debug와 같은 키로 서명 → 기존 설치 위에 바로 업데이트 가능
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -88,12 +90,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.compose.material:material-icons-extended")
-    // 1. DataStore (메모리 영구 저장 기능)
+    // DataStore (설정·기록 영구 저장)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-    // 2. Media3 (동영상 매뉴얼 팝업 기능)
-    implementation("androidx.media3:media3-exoplayer:1.2.1")
-    implementation("androidx.media3:media3-ui:1.2.1")
     // Glass 배경 blur (Haze 1.x)
     implementation("dev.chrisbanes.haze:haze:1.6.10")  // 1.7부터 compileSdk 37 필요
 }

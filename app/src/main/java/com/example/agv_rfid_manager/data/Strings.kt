@@ -34,6 +34,7 @@ val Strings: Map<String, Array<String>> = mapOf(
     "st_err" to arrayOf("Error", "오류"),
     "verify_ok" to arrayOf("verified", "검증 OK"),
     "chip_undo" to arrayOf("Undo (%s)", "되돌리기 (%s)"),
+    "st_read_hint" to arrayOf("Tap to load into input", "누르면 입력칸에 들어가요"),
 
     // 오류
     "e_time" to arrayOf("TIMEOUT", "시간 초과"),
@@ -44,6 +45,8 @@ val Strings: Map<String, Array<String>> = mapOf(
     "err_time" to arrayOf("Timed out", "시간 초과"),
     "err_retry" to arrayOf("Hold the tag again", "태그를 다시 대세요"),
     "err_lost" to arrayOf("Tag moved away. Hold it again", "태그가 떨어졌어요. 다시 대세요"),
+    "err_unsupp" to arrayOf("Unsupported tag", "지원하지 않는 태그예요"),
+    "err_unsupp_d" to arrayOf("Only ISO 15693 tags can be used", "ISO 15693 태그만 읽고 쓸 수 있어요"),
 
     // 입력·프리셋·이력
     "in_title" to arrayOf("Code", "코드 입력"),
@@ -64,6 +67,7 @@ val Strings: Map<String, Array<String>> = mapOf(
 
     // 액션 바
     "btn_write" to arrayOf("Write", "쓰기"),
+    "btn_write_hint" to arrayOf("Hold for continuous write", "길게 누르면 연속 쓰기"),
     "btn_cancel" to arrayOf("Cancel write", "쓰기 취소"),
     "btn_stop" to arrayOf("Stop continuous", "연속 쓰기 종료"),
 

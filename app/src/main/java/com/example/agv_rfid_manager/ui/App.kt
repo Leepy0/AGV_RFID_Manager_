@@ -106,7 +106,6 @@ fun MainApp(
     else tabBarBottom + TAB_BAR_HEIGHT + 28.dp
 
     TagEffects(tag, actions, settings)
-    // 앱 내 업데이트: 시작 시 1회 확인 (프로세스당)
     LaunchedEffect(sheet) { sheet?.let { lastSheet = it } }
     BackHandler(enabled = sheet != null) { sheet = null }
 

@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# 크래시 로그(설정 > 크래시 로그)에서 클래스·줄 번호를 그대로 읽을 수 있게 난독화는 끄고 축소·최적화만 한다
+-dontobfuscate
+-keepattributes SourceFile,LineNumberTable

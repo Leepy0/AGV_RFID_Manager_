@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -81,26 +82,6 @@ fun LargeTitle(title: String, trailing: (@Composable () -> Unit)? = null) {
     }
 }
 
-// 상태 칩 (점 + 문구)
-@Composable
-fun StatusPill(text: String, dotColor: Color, onClick: (() -> Unit)? = null) {
-    Row(
-        modifier = Modifier
-            .height(32.dp)
-            .glass(RoundedCornerShape(16.dp), GlassLevel.THIN)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 13.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier.size(14.dp).clip(CircleShape).background(dotColor.copy(alpha = 0.22f)),
-            contentAlignment = Alignment.Center,
-        ) { Box(Modifier.size(8.dp).clip(CircleShape).background(dotColor)) }
-        Spacer(Modifier.width(6.dp))
-        Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.ink)
-    }
-}
-
 // 섹션 머리말 (왼쪽 제목, 오른쪽 파란 링크)
 @Composable
 fun SectionHeader(title: String, action: String? = null, actionIcon: ImageVector? = null, onAction: (() -> Unit)? = null) {
@@ -130,14 +111,12 @@ fun Segmented(
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    height: Dp = 36.dp,
-    opaque: Boolean = false,
+    height: Dp = 48.dp,
 ) {
     val c = AppTheme.colors
     val low = AppTheme.lowEffects
-    val bg = if (opaque) c.ink.copy(alpha = if (c.isDark) 0.06f else 0.07f).compositeOver(c.solid) else c.fill
     Row(
-        modifier = modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(12.dp)).background(bg).padding(3.dp),
+        modifier = modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(12.dp)).background(c.fill).padding(3.dp),
     ) {
         options.forEachIndexed { i, (icon, label) ->
             val on = i == selected
@@ -163,16 +142,16 @@ fun Segmented(
     }
 }
 
-// 상태 색 칩 버튼 (되돌리기·불러오기)
+// 상태 색 칩 버튼 (되돌리기·NFC 설정 열기) — 장갑 손가락 기준 44dp
 @Composable
 fun TintChip(icon: ImageVector, text: String, color: Color, onClick: () -> Unit) {
     Row(
         modifier = Modifier
-            .height(34.dp)
-            .clip(RoundedCornerShape(17.dp))
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
             .background(color.copy(alpha = 0.14f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 15.dp),
+            .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
@@ -181,7 +160,7 @@ fun TintChip(icon: ImageVector, text: String, color: Color, onClick: () -> Unit)
     }
 }
 
-// 큰 실행 버튼 (쓰기·취소·연속 종료)
+// 큰 실행 버튼 (쓰기·취소·연속 종료). hint: 버튼 아래 작은 안내문(길게 누르기 등), enabled=false면 흐리게·누름 불가
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActionButton(
@@ -192,6 +171,8 @@ fun ActionButton(
     code: String? = null,
     height: Dp = 56.dp,
     modifier: Modifier = Modifier,
+    hint: String? = null,
+    enabled: Boolean = true,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
@@ -200,25 +181,32 @@ fun ActionButton(
     val big = height >= 64.dp
     val bg = if (tinted) color.copy(alpha = 0.16f).compositeOver(c.solid) else color
     val fg = if (tinted) color else Color.White
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
+            .alpha(if (enabled) 1f else 0.45f)
             .clip(RoundedCornerShape(if (big) 22.dp else 19.dp))
             .background(bg)
             .combinedClickable(
+                enabled = enabled,
                 onClick = { tick(); onClick() },
                 onLongClick = onLongClick?.let { lc -> { tick(); lc() } },
             ),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, null, tint = fg, modifier = Modifier.size(if (big) 26.dp else 22.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(text, color = fg, fontSize = if (big) 20.sp else 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        if (code != null) {
-            Spacer(Modifier.width(10.dp))
-            Text(code, style = mono(if (big) 20.sp else 18.sp), color = fg.copy(alpha = 0.9f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = fg, modifier = Modifier.size(if (big) 26.dp else 22.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text, color = fg, fontSize = if (big) 20.sp else 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (code != null) {
+                Spacer(Modifier.width(10.dp))
+                Text(code, style = mono(if (big) 20.sp else 18.sp), color = fg.copy(alpha = 0.9f))
+            }
+        }
+        if (hint != null) {
+            Text(hint, color = fg.copy(alpha = 0.78f), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
     }
 }

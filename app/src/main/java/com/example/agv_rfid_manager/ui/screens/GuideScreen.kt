@@ -73,7 +73,7 @@ fun GuideContent(bottomPadding: Dp) {
             options = listOf(null to t("g_tab_app"), null to t("g_tab_err")),
             selected = sub,
             onSelect = { sub = it },
-            height = 40.dp,
+            height = 48.dp,
         )
         Spacer(Modifier.height(12.dp))
         val listPadding = PaddingValues(bottom = bottomPadding)
