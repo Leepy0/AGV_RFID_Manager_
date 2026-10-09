@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGV Tag Reader 설치·사용 설명서</title>
+<meta name="description" content="AGV 바닥 RFID 태그를 읽고 쓰는 안드로이드 앱 AGV Tag Reader의 설치 방법과 사용 방법을 처음 쓰는 사람도 따라 할 수 있게 설명합니다.">
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #1b1d22; --ink2: #4a4f59; --ink3: #7b808b;
+    --line: #e2e4e9; --blue: #2b6fe6; --blue-bg: #e9f0fd; --orange: #d97706; --orange-bg: #fff4e0;
+    --red: #d8323c; --red-bg: #fdecee; --green: #1f8f4e; --green-bg: #e6f6ec; --kbd: #eef0f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --card: #181b21; --ink: #f1f2f4; --ink2: #b9bdc6; --ink3: #80858f;
+      --line: #2a2e36; --blue: #5b93ff; --blue-bg: #17243d; --orange: #f5a623; --orange-bg: #33260f;
+      --red: #ff6b73; --red-bg: #3a1a1d; --green: #4cc07a; --green-bg: #15301f; --kbd: #262a32;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    font-size: 17px; line-height: 1.7; word-break: keep-all;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 0 16px 80px; }
+  header.hero { padding: 36px 0 20px; }
+  header.hero h1 { font-size: 30px; line-height: 1.25; margin: 0 0 8px; }
+  header.hero p { margin: 0 0 18px; color: var(--ink2); }
+  h2 { font-size: 24px; margin: 56px 0 14px; padding-top: 10px; border-top: 2px solid var(--line); scroll-margin-top: 16px; }
+  h2 .num { display: inline-block; min-width: 34px; height: 34px; line-height: 34px; text-align: center; border-radius: 10px; background: var(--blue); color: #fff; font-size: 17px; margin-right: 10px; vertical-align: 3px; }
+  h3 { font-size: 19px; margin: 30px 0 10px; scroll-margin-top: 16px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--blue); }
+  ul, ol { padding-left: 22px; margin: 0 0 12px; }
+  li { margin: 4px 0; }
+  kbd {
+    display: inline-block; font: inherit; font-weight: 600; background: var(--kbd); border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 7px; padding: 0 8px; line-height: 1.5; white-space: nowrap;
+  }
+  code { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.95em; background: var(--kbd); padding: 1px 6px; border-radius: 6px; }
+  .btn {
+    display: inline-block; background: var(--blue); color: #fff !important; text-decoration: none; font-weight: 700;
+    font-size: 19px; padding: 16px 24px; border-radius: 16px; box-shadow: 0 6px 18px rgba(43,111,230,.3);
+  }
+  .btn small { display: block; font-size: 13px; font-weight: 500; opacity: .85; }
+  .btn-sub { display: block; margin-top: 10px; font-size: 14px; color: var(--ink3); }
+  .toc { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px; margin: 20px 0 10px; }
+  .toc b { display: block; margin-bottom: 6px; }
+  .toc ol { margin: 0; padding-left: 24px; }
+  .toc li { margin: 3px 0; }
+  .toc a { text-decoration: none; }
+  .steps { list-style: none; padding: 0; margin: 14px 0 20px; counter-reset: step; }
+  .steps > li { position: relative; padding: 0 0 18px 50px; counter-increment: step; }
+  .steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: 2px; width: 36px; height: 36px; border-radius: 50%;
+    background: var(--blue); color: #fff; font-weight: 700; font-size: 17px; text-align: center; line-height: 36px;
+  }
+  .steps > li::after { content: ""; position: absolute; left: 17px; top: 42px; bottom: 0; width: 2px; background: var(--line); }
+  .steps > li:last-child::after { display: none; }
+  .steps > li > b { display: block; font-size: 18px; margin-bottom: 4px; }
+  .box { border-radius: 14px; padding: 14px 16px; margin: 12px 0 16px; border: 1px solid transparent; }
+  .box b.t { display: block; margin-bottom: 4px; }
+  .screen { background: var(--orange-bg); border-color: color-mix(in srgb, var(--orange) 40%, transparent); }
+  .screen b.t { color: var(--orange); }
+  .tip { background: var(--blue-bg); border-color: color-mix(in srgb, var(--blue) 35%, transparent); }
+  .tip b.t { color: var(--blue); }
+  .warn { background: var(--red-bg); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+  .warn b.t { color: var(--red); }
+  .ok { background: var(--green-bg); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+  .ok b.t { color: var(--green); }
+  .quote { font-style: normal; color: var(--ink); font-weight: 600; }
+  figure { margin: 16px 0 22px; text-align: center; }
+  figure img { width: 100%; max-width: 280px; border-radius: 22px; border: 1px solid var(--line); background: #000; }
+  figure.wide img { max-width: 100%; }
+  figcaption { font-size: 14px; color: var(--ink3); margin-top: 8px; }
+  .shots { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+  .shots figure { flex: 1 1 200px; max-width: 280px; margin: 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 16px; }
+  th, td { border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--kbd); }
+  td code { white-space: nowrap; }
+  .code-big { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 44px; font-weight: 800; letter-spacing: 4px; text-align: center; margin: 10px 0 4px; }
+  .code-parts { display: flex; gap: 8px; justify-content: center; text-align: center; font-size: 14px; color: var(--ink2); margin-bottom: 14px; }
+  .code-parts span { flex: 1 1 0; max-width: 150px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; }
+  .code-parts b { display: block; font-size: 22px; color: var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .top { position: fixed; right: 14px; bottom: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; text-decoration: none; font-size: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.12); color: var(--ink); }
+  footer { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--ink3); font-size: 14px; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; margin: 10px 0; }
+  summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+
+<header class="hero">
+  <h1>AGV Tag Reader<br>설치·사용 설명서</h1>
+  <p>휴대폰으로 AGV 바닥 RFID 태그를 읽고 쓰는 앱입니다. 휴대폰을 처음 다루는 분도 그대로 따라 하실 수 있게 하나씩 적었습니다.</p>
+  <a class="btn" id="dl" href="https://github.com/Leepy0/AGV_RFID_Manager_/releases/tag/latest-debug">📥 앱 내려받기 (최신 버전)<small id="dl-ver">버전 확인 중…</small></a>
+  <span class="btn-sub">이 설명서를 <b>설치할 휴대폰</b>에서 열고 위 버튼을 누르는 것이 가장 쉽습니다. 컴퓨터에서 보고 계시다면 휴대폰으로 이 페이지 주소를 보내 주세요.</span>
+</header>
+
+<nav class="toc">
+  <b>차례</b>
+  <ol>
+    <li><a href="#prep">시작하기 전에 확인할 것</a></li>
+    <li><a href="#download">앱 파일 내려받기</a></li>
+    <li><a href="#install">앱 설치하기 — 경고 문구 처리 방법</a></li>
+    <li><a href="#first">처음 실행하기 — NFC 켜기</a></li>
+    <li><a href="#install-trouble">설치가 안 될 때</a></li>
+    <li><a href="#update">앱 업데이트하기</a></li>
+    <li><a href="#screen">화면 구성 한눈에 보기</a></li>
+    <li><a href="#code">태그 코드란?</a></li>
+    <li><a href="#read">태그 읽기</a></li>
+    <li><a href="#write">태그에 쓰기 (1장)</a></li>
+    <li><a href="#cont">연속 쓰기 (여러 장 같은 값)</a></li>
+    <li><a href="#undo">잘못 썼을 때 되돌리기</a></li>
+    <li><a href="#preset">프리셋 (자주 쓰는 코드 저장)</a></li>
+    <li><a href="#history">작업 기록</a></li>
+    <li><a href="#settings">설정 항목 설명</a></li>
+    <li><a href="#guide">앱 안의 가이드·에러 코드</a></li>
+    <li><a href="#faq">자주 생기는 문제와 해결</a></li>
+    <li><a href="#uninstall">앱 지우기</a></li>
+  </ol>
+</nav>
+
+<!-- ===================================================================== -->
+<h2 id="prep"><span class="num">1</span>시작하기 전에 확인할 것</h2>
+<ul>
+  <li><b>안드로이드 휴대폰</b>이어야 합니다 (갤럭시 등). 아이폰에는 설치되지 않습니다.</li>
+  <li>휴대폰에 <b>NFC 기능</b>이 있어야 합니다. 최근 몇 년 사이에 나온 갤럭시는 거의 다 있습니다. (삼성페이·교통카드가 되는 휴대폰이면 있습니다.)</li>
+  <li>안드로이드 <b>8.0 이상</b>이어야 합니다. 2018년 이후 휴대폰이면 대부분 됩니다.</li>
+  <li>앱을 내려받고 업데이트할 때만 <b>인터넷</b>이 필요합니다. 태그를 읽고 쓰는 데는 인터넷이 필요 없습니다.</li>
+</ul>
+<div class="box tip"><b class="t">걸리는 시간</b>내려받기부터 설치까지 보통 3~5분입니다. 중간에 나오는 경고 문구는 모두 정상이며, 아래에 하나씩 처리 방법을 적어 두었습니다.</div>
+
+<!-- ===================================================================== -->
+<h2 id="download"><span class="num">2</span>앱 파일 내려받기</h2>
+<p>이 앱은 플레이스토어에 올라가 있지 않고, 회사 저장소(GitHub)에서 직접 내려받아 설치합니다. 그래서 휴대폰이 "모르는 앱"이라고 몇 번 경고를 띄우는데, 모두 정상입니다.</p>
+<ol class="steps">
+  <li><b>휴대폰에서 이 페이지를 엽니다.</b>
+    컴퓨터에서 보고 있다면 이 페이지 주소를 카카오톡 등으로 휴대폰에 보낸 뒤, 휴대폰에서 누릅니다.</li>
+  <li><b>맨 위의 파란 <kbd>📥 앱 내려받기</kbd> 버튼을 누릅니다.</b>
+    <div class="box screen"><b class="t">이런 화면이 나오면</b>
+      파란 버튼이 <b>GitHub 사이트</b>로 연결되는 경우가 있습니다. 그러면 화면을 아래로 내려 <b>Assets</b>라는 글자를 찾고, 그 아래의 <code>AGV_RFID_Manager_v….apk</code> 파일 이름을 누르세요. (Assets가 접혀 있으면 한 번 눌러 펼칩니다.)</div></li>
+  <li><b>브라우저 경고가 뜨면 "다운로드(유지)"를 누릅니다.</b>
+    <div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
+      <span class="quote">"이 파일 형식은 휴대전화에 해를 끼칠 수 있습니다. AGV_RFID_Manager_….apk 파일을 유지하시겠습니까?"</span><br>
+      → <kbd>유지</kbd> 또는 <kbd>다운로드</kbd>를 누릅니다. (크롬 기준. 삼성 인터넷은 <span class="quote">"파일이 휴대전화에 해를 끼칠 수 있습니다"</span> → <kbd>다운로드</kbd>)<br>
+      앱 설치 파일(.apk)을 받을 때 항상 나오는 문구입니다. 이 앱 자체에 문제가 있다는 뜻이 아닙니다.</div></li>
+  <li><b>다운로드가 끝나면 알림이 뜹니다. 알림을 누르거나 <kbd>열기</kbd>를 누릅니다.</b>
+    <div class="box tip"><b class="t">알림을 놓쳤다면</b>
+      휴대폰의 <b>내 파일</b>(또는 <b>파일</b>) 앱을 열고 → <b>다운로드</b> 폴더 → <code>AGV_RFID_Manager_v….apk</code> 파일을 누르세요. 크롬에서는 오른쪽 위 <kbd>⋮</kbd> → <kbd>다운로드</kbd>에서도 찾을 수 있습니다.</div></li>
+</ol>
+
+<!-- ===================================================================== -->
+<h2 id="install"><span class="num">3</span>앱 설치하기 — 경고 문구 처리 방법</h2>
+<p>내려받은 파일을 누르면 설치가 시작됩니다. 휴대폰 종류와 설정에 따라 아래 화면 중 일부만 나올 수도 있고, 순서가 조금 다를 수도 있습니다. <b>나오는 화면을 찾아 그대로 하시면 됩니다.</b></p>
+
+<h3>3-1. "이 출처의 앱을 설치할 수 없습니다" (가장 많이 나옴)</h3>
+<div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
+  <span class="quote">"보안상의 이유로 휴대전화에서 이 출처의 알 수 없는 앱을 설치할 수 없도록 설정되어 있습니다."</span><br>
+  또는 <span class="quote">"출처를 알 수 없는 앱 설치 — 보안을 위해 … 허용되지 않습니다."</span></div>
+<ol class="steps">
+  <li><b>그 화면의 <kbd>설정</kbd> 버튼을 누릅니다.</b> (설정 앱이 자동으로 열립니다.)</li>
+  <li><b>"이 출처 허용" 스위치를 켭니다.</b> 스위치가 파란색(또는 초록색)이 되면 켜진 것입니다.
+    <div class="box tip"><b class="t">이게 무슨 뜻인가요?</b>"크롬(또는 내 파일) 앱이 내려받은 설치 파일로 앱을 설치해도 된다"는 허락입니다. 지금 사용하는 크롬·내 파일 같은 앱에만 허락하는 것이라서 휴대폰 전체 보안이 꺼지는 것이 아닙니다.</div></li>
+  <li><b>휴대폰의 <kbd>◀ 뒤로</kbd> 버튼을 누릅니다.</b> 그러면 설치 화면으로 돌아옵니다. (돌아오지 않으면 내려받은 파일을 다시 한 번 누르세요.)</li>
+</ol>
+
+<h3>3-2. "이 앱을 설치하시겠습니까?"</h3>
+<div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
+  <span class="quote">"AGV Tag Reader — 이 애플리케이션을 설치하시겠습니까?"</span><br>
+  → <kbd>설치</kbd>를 누릅니다. 몇 초 뒤 <span class="quote">"앱이 설치되었습니다"</span>가 나오면 끝입니다. <kbd>열기</kbd>를 누르세요.</div>
+<p>이미 이 앱이 깔려 있는 휴대폰이라면 <span class="quote">"기존 애플리케이션을 업데이트하시겠습니까? 기존 데이터는 삭제되지 않습니다."</span>라고 나옵니다. 마찬가지로 <kbd>설치</kbd>(또는 <kbd>업데이트</kbd>)를 누르면 됩니다. 작업 기록과 설정은 그대로 남습니다.</p>
+
+<h3>3-3. Play 프로텍트 경고 — "인식할 수 없는 앱" / "앱을 차단했습니다"</h3>
+<p>구글이 플레이스토어에 없는 앱을 설치할 때 띄우는 경고입니다. 문구가 몇 가지 종류가 있습니다.</p>
+<div class="box screen"><b class="t">① "차단됨" 또는 "인식할 수 없는 앱"이라고 나올 때</b>
+  <span class="quote">"Play 프로텍트에서 이 앱을 차단했습니다 / 이 앱은 알 수 없는 개발자가 만든 앱입니다"</span><br>
+  → 작은 글씨의 <kbd>자세히 알아보기</kbd>(또는 <kbd>세부정보</kbd>)를 먼저 누르면 아래에 <kbd>무시하고 설치</kbd> 버튼이 나타납니다. 그것을 누르세요.<br>
+  <kbd>무시하고 설치</kbd>가 바로 보이면 그냥 누르면 됩니다.</div>
+<div class="box screen"><b class="t">② "앱을 검사(스캔)하세요"라고 나올 때</b>
+  <span class="quote">"설치하기 전에 앱을 검사하는 것이 좋습니다"</span> → <kbd>검사</kbd>(스캔)를 누르고 잠시 기다립니다. <span class="quote">"유해한 앱이 없습니다"</span>가 나오면 <kbd>설치</kbd>를 누르세요.<br>
+  <kbd>검사하지 않고 설치</kbd>가 보이면 그것을 눌러도 됩니다.</div>
+<div class="box screen"><b class="t">③ 설치가 끝난 뒤 "검사를 위해 보내시겠습니까?"라고 나올 때</b>
+  <kbd>보내지 않음</kbd>을 눌러도 되고 <kbd>보내기</kbd>를 눌러도 됩니다. 어느 쪽이든 앱 사용에는 영향이 없습니다.</div>
+<div class="box tip"><b class="t">왜 이런 경고가 나오나요?</b>이 앱은 플레이스토어에 등록하지 않고 회사 저장소에서 직접 배포하기 때문에, 구글 입장에서는 "모르는 앱"입니다. 앱이 위험하다는 뜻이 아니라, 구글이 검사한 적이 없다는 뜻입니다.</div>
+
+<h3>3-4. 갤럭시 "자동 차단" (설치 자체가 막힐 때)</h3>
+<p>최신 갤럭시(One UI 6 이상)에는 <b>자동 차단</b>이라는 기능이 있어서, 켜져 있으면 설치 파일을 눌러도 설치가 아예 안 됩니다.</p>
+<div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
+  <span class="quote">"자동 차단이 켜져 있어 앱을 설치할 수 없습니다" / "승인되지 않은 출처의 앱 설치가 차단되었습니다"</span></div>
+<ol class="steps">
+  <li><b>휴대폰 <kbd>설정</kbd> 앱을 엽니다.</b> (톱니바퀴 모양)</li>
+  <li><b><kbd>보안 및 개인정보 보호</kbd>를 누릅니다.</b></li>
+  <li><b><kbd>자동 차단</kbd>을 누르고, 맨 위의 스위치를 끕니다.</b></li>
+  <li><b>내려받은 파일을 다시 눌러 설치합니다.</b> 설치가 끝난 뒤에는 자동 차단을 다시 켜도 됩니다. (이미 설치된 앱과 앱 안의 업데이트에는 영향이 없습니다.)</li>
+</ol>
+
+<div class="box ok"><b class="t">설치 완료!</b>홈 화면이나 앱 목록에 <b>AGV Tag Reader</b> 아이콘이 생겼으면 성공입니다. 아이콘을 눌러 다음 단계로 가세요.</div>
+
+<!-- ===================================================================== -->
+<h2 id="first"><span class="num">4</span>처음 실행하기 — NFC 켜기</h2>
+<p>이 앱은 휴대폰의 <b>NFC</b>(가까이 대면 통신하는 기능)로 태그를 읽고 씁니다. NFC가 꺼져 있으면 앱 맨 위 카드가 <b>빨간색</b>으로 <span class="quote">"NFC가 꺼져 있어요"</span>라고 알려 줍니다.</p>
+<figure>
+  <img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/02_tag_idle.png" alt="NFC가 꺼져 있을 때의 앱 화면. 맨 위 카드가 빨간색이고 'NFC 설정 열기' 버튼이 있다.">
+  <figcaption>NFC가 꺼져 있을 때. 카드 안의 <kbd>NFC 설정 열기</kbd>를 누르면 됩니다.</figcaption>
+</figure>
+<ol class="steps">
+  <li><b>빨간 카드 안의 <kbd>NFC 설정 열기</kbd>를 누릅니다.</b> 휴대폰 설정의 NFC 화면이 열립니다.</li>
+  <li><b><kbd>NFC 및 비접촉 결제</kbd>(또는 <kbd>NFC</kbd>) 스위치를 켭니다.</b></li>
+  <li><b><kbd>◀ 뒤로</kbd>를 눌러 앱으로 돌아옵니다.</b> 카드가 파란색 <span class="quote">"읽기 대기"</span>로 바뀌면 준비 완료입니다.</li>
+</ol>
+<div class="box tip"><b class="t">직접 찾아가려면</b>휴대폰 <kbd>설정</kbd> → <kbd>연결</kbd> → <kbd>NFC 및 비접촉 결제</kbd> → 켜기. 화면 위에서 아래로 내려 나오는 빠른 설정 패널에 <b>NFC</b> 버튼이 있는 휴대폰도 많습니다.</div>
+
+<h3>이 앱이 쓰는 권한 (안심하셔도 됩니다)</h3>
+<p>설치나 실행 중에 <b>"허용하시겠습니까?"</b> 하고 묻는 권한 창은 뜨지 않습니다. 앱이 사용하는 기능은 아래가 전부입니다.</p>
+<table>
+  <tr><th>기능</th><th>어디에 쓰이나</th></tr>
+  <tr><td>NFC</td><td>태그를 읽고 쓰는 데 사용합니다. 앱의 핵심 기능입니다.</td></tr>
+  <tr><td>진동</td><td>읽기·쓰기 성공 시 짧게, 오류 시 길게 울립니다. 설정에서 끌 수 있습니다.</td></tr>
+  <tr><td>인터넷</td><td>새 버전이 있는지 회사 저장소(GitHub)에서 확인하고 내려받을 때만 씁니다.</td></tr>
+  <tr><td>앱 설치 요청</td><td>앱 안에서 업데이트를 설치할 때 설치 화면을 여는 데 씁니다. (<a href="#update">6번</a> 참고)</td></tr>
+</table>
+<p>카메라, 위치, 연락처, 사진, 마이크 등은 <b>전혀 사용하지 않습니다.</b> 태그 내용이나 작업 기록은 휴대폰 안에만 저장되며 어디에도 전송되지 않습니다.</p>
+
+<!-- ===================================================================== -->
+<h2 id="install-trouble"><span class="num">5</span>설치가 안 될 때</h2>
+<table>
+  <tr><th style="width:42%">나오는 문구 / 증상</th><th>해결 방법</th></tr>
+  <tr><td><span class="quote">"앱이 설치되지 않았습니다"</span><br><span class="quote">"기존 패키지와 충돌"</span><br><span class="quote">"패키지가 유효하지 않습니다"</span></td>
+      <td>예전에 다른 방법(개발용 컴퓨터 등)으로 설치했던 같은 앱이 남아 있을 때 생깁니다. 기존 <b>AGV Tag Reader</b> 앱을 먼저 지우고(<a href="#uninstall">18번</a>) 다시 설치하세요. 이 경우 작업 기록은 사라집니다.</td></tr>
+  <tr><td><span class="quote">"구문 분석 오류" / "패키지 파싱 중 문제가 발생했습니다"</span></td>
+      <td>파일이 끝까지 받아지지 않은 경우입니다. 받은 파일을 지우고 <a href="#download">2번</a>부터 다시 내려받으세요. 와이파이가 불안정하면 모바일 데이터로 받아 보세요.</td></tr>
+  <tr><td><span class="quote">"이 휴대전화와 호환되지 않는 앱입니다"</span></td>
+      <td>안드로이드 8.0 미만이거나 NFC가 없는 휴대폰입니다. 이 휴대폰에는 설치할 수 없습니다.</td></tr>
+  <tr><td>파일을 눌러도 아무 일도 없음</td>
+      <td>갤럭시 <b>자동 차단</b>이 켜져 있을 가능성이 큽니다. <a href="#install">3-4</a>를 보세요. 그래도 안 되면 <b>내 파일</b> 앱 → <b>다운로드</b> 폴더에서 파일을 눌러 보세요.</td></tr>
+  <tr><td>내려받기 자체가 안 됨 / 끝없이 기다림</td>
+      <td>회사 와이파이가 외부 사이트를 막는 경우가 있습니다. 와이파이를 끄고 <b>모바일 데이터</b>로 받아 보세요.</td></tr>
+  <tr><td>설치는 됐는데 아이콘을 못 찾겠음</td>
+      <td>홈 화면에서 위로 쓸어 올리면 나오는 <b>앱 목록</b>에서 <b>AGV Tag Reader</b>를 찾으세요. 위쪽 검색창에 "AGV"라고 쳐도 됩니다.</td></tr>
+</table>
+
+<!-- ===================================================================== -->
+<h2 id="update"><span class="num">6</span>앱 업데이트하기</h2>
+<p>새 버전이 나오면 <b>앱을 다시 내려받을 필요 없이</b> 앱 안에서 바로 업데이트할 수 있습니다. 앱을 열 때(그리고 앱으로 돌아올 때) 자동으로 새 버전이 있는지 확인합니다.</p>
+<div class="shots">
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/22_update_dialog.png" alt="업데이트가 있어요 창"><figcaption>새 버전이 있을 때 뜨는 창</figcaption></figure>
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/24_update_need_permission.png" alt="설치 허용이 필요해요 창"><figcaption>처음 한 번만 나오는 허용 요청</figcaption></figure>
+</div>
+<ol class="steps">
+  <li><b><span class="quote">"업데이트가 있어요"</span> 창이 뜨면 <kbd>업데이트</kbd>를 누릅니다.</b>
+    지금 바쁘면 <kbd>나중에</kbd>를 눌러도 됩니다. 다음에 앱을 열면 다시 물어봅니다.</li>
+  <li><b>내려받는 동안 잠시 기다립니다.</b> 진행 막대가 끝까지 차면 설치 화면이 자동으로 열립니다.</li>
+  <li><b>처음 한 번은 <span class="quote">"설치 허용이 필요해요"</span>가 나옵니다. <kbd>설정 열기</kbd>를 누릅니다.</b>
+    <div class="box screen"><b class="t">이어서 나오는 설정 화면에서</b><b>AGV Tag Reader</b>의 <kbd>이 출처 허용</kbd> 스위치를 켠 다음 <kbd>◀ 뒤로</kbd>를 누르세요. 앱으로 돌아오면 설치 화면이 바로 열립니다.<br>
+    (<a href="#install">3-1</a>에서는 "크롬"에게 허락했고, 이번에는 "AGV Tag Reader 앱 자신"에게 허락하는 것이라 한 번 더 묻습니다. 두 번째 업데이트부터는 나오지 않습니다.)</div></li>
+  <li><b><span class="quote">"기존 애플리케이션을 업데이트하시겠습니까? 기존 데이터는 삭제되지 않습니다."</span> → <kbd>설치</kbd>(또는 <kbd>업데이트</kbd>)를 누릅니다.</b>
+    Play 프로텍트 경고가 나오면 <a href="#install">3-3</a>과 같이 처리하세요.</li>
+  <li><b><span class="quote">"앱이 업데이트되었습니다"</span> → <kbd>열기</kbd>.</b> 작업 기록, 프리셋, 설정은 모두 그대로 남습니다.</li>
+</ol>
+<h3>직접 확인하고 싶을 때</h3>
+<p>앱 아래쪽 <kbd>설정</kbd> 탭 → 맨 아래 <b>정보</b> → <kbd>업데이트 확인</kbd>을 누르세요. 그 줄 아래에 결과가 나옵니다.</p>
+<table>
+  <tr><th style="width:42%">표시되는 글</th><th>뜻</th></tr>
+  <tr><td><span class="quote">최신 버전이에요</span></td><td>지금 쓰는 버전이 최신입니다. 할 일이 없습니다.</td></tr>
+  <tr><td><span class="quote">새 버전 v2.x.x · 빌드 N</span></td><td>새 버전이 있습니다. 이어서 뜨는 창에서 <kbd>업데이트</kbd>를 누르세요.</td></tr>
+  <tr><td><span class="quote">확인 실패 · 네트워크를 확인해 주세요</span></td><td>인터넷에 연결되지 않았거나, 회사 와이파이가 저장소를 막고 있습니다. 모바일 데이터로 바꾸고 다시 눌러 보세요. 새 버전을 올리는 중(1~2분)에도 잠깐 실패할 수 있으니 조금 뒤 다시 눌러 보세요.</td></tr>
+</table>
+<p>바로 위 <b>앱 버전</b> 줄에서 지금 설치된 버전과 빌드 번호를 볼 수 있습니다. 문의할 때 이 숫자를 같이 알려 주시면 좋습니다.</p>
+
+<!-- ===================================================================== -->
+<h2 id="screen"><span class="num">7</span>화면 구성 한눈에 보기</h2>
+<figure>
+  <img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/06_after_pick.png" alt="태그 탭 전체 화면">
+  <figcaption>태그 탭. (이 설명서의 그림은 NFC가 없는 시험용 기기에서 찍어 맨 위 카드가 "NFC 꺼짐"으로 나옵니다. 실제 휴대폰에서는 파란 "읽기 대기"로 보입니다.)</figcaption>
+</figure>
+<p>앱은 아래쪽 탭 3개로 나뉩니다. 평소 작업은 모두 <b>태그</b> 탭에서 합니다.</p>
+<table>
+  <tr><th style="width:30%">위치</th><th>하는 일</th></tr>
+  <tr><td><b>상태 카드</b> (맨 위 큰 카드)</td><td>지금 상태(읽기 대기 / 쓰기 대기 / 읽기 완료 / 쓰기 완료 / 오류)와 읽거나 쓴 코드를 크게 보여 줍니다. 색으로도 구분됩니다: 파랑=대기·완료, 주황=쓰기 대기, 초록=읽기 완료, 보라=연속 쓰기, 빨강=오류·NFC 꺼짐.</td></tr>
+  <tr><td><b>코드 입력</b></td><td>태그에 쓸 4자리 코드를 넣는 칸입니다. 오른쪽 <kbd>목록</kbd>을 누르면 자주 쓰는 코드를 골라 넣을 수 있습니다.</td></tr>
+  <tr><td><b>프리셋</b></td><td>자주 쓰는 코드 5개를 저장해 두고 한 번에 불러오는 칸입니다.</td></tr>
+  <tr><td><b>최근 작업</b></td><td>최근에 읽고 쓴 기록 3개. <kbd>전체</kbd>를 누르면 전부 봅니다.</td></tr>
+  <tr><td><b><kbd>쓰기</kbd> 버튼</b> (맨 아래 큰 버튼)</td><td>짧게 누르면 1장 쓰기, <b>길게 누르면 연속 쓰기</b>가 시작됩니다.</td></tr>
+  <tr><td><b>탭</b> (맨 아래)</td><td><kbd>태그</kbd> 작업 화면 / <kbd>가이드</kbd> 사용법·에러 코드 / <kbd>설정</kbd></td></tr>
+</table>
+<div class="box tip"><b class="t">폴드·태블릿</b>화면이 넓으면 상태 카드와 입력 칸이 좌우로 나란히 배치됩니다. 쓰는 방법은 똑같습니다.</div>
+
+<!-- ===================================================================== -->
+<h2 id="code"><span class="num">8</span>태그 코드란?</h2>
+<p>바닥 태그 한 장에는 <b>4자리 코드</b>가 한 개 들어 있습니다. AGV는 이 코드를 읽고 "여기서 멈춰라", "우회전해라" 같은 동작을 합니다.</p>
+<div class="code-big">0T21</div>
+<div class="code-parts">
+  <span><b>0</b>첫째 자리<br>숫자 0~9 또는 A~F</span>
+  <span><b>T</b>커맨드 타입<br>알파벳 1글자</span>
+  <span><b>21</b>번호<br>두 자리 숫자 00~99</span>
+</div>
+<p>앱의 코드 입력 칸도 이 세 부분으로 나뉘어 있습니다. 평소에는 첫째 자리 <code>0</code>, 커맨드 타입 <code>T</code>를 그대로 두고 <b>번호 두 자리만</b> 바꾸는 경우가 대부분입니다.</p>
+<h3>자주 쓰는 코드 (앱의 <kbd>목록</kbd>에 들어 있는 것)</h3>
+<table>
+  <tr><th>코드</th><th>뜻</th><th>코드</th><th>뜻</th></tr>
+  <tr><td><code>0T01</code></td><td>정지</td><td><code>0T21</code></td><td>우회전 90도</td></tr>
+  <tr><td><code>0T02</code></td><td>저속 주행</td><td><code>0T22</code></td><td>좌회전 90도</td></tr>
+  <tr><td><code>0T03</code></td><td>초저속 주행</td><td><code>0T23</code></td><td>우회전 180도</td></tr>
+  <tr><td><code>0T04</code></td><td>로딩</td><td><code>0T24</code></td><td>좌회전 180도</td></tr>
+  <tr><td><code>0T05</code></td><td>고속 주행</td><td><code>0T25</code></td><td>우회전 90도 FB</td></tr>
+  <tr><td><code>0T07</code></td><td>언로딩</td><td><code>0T26</code></td><td>좌회전 90도 FB</td></tr>
+  <tr><td><code>0T08</code></td><td>좌측 분기</td><td><code>0T27</code></td><td>장애물 센서 OFF</td></tr>
+  <tr><td><code>0T09</code></td><td>우측 분기</td><td><code>0T28</code></td><td>장애물 센서 ON</td></tr>
+</table>
+<p>목록에 있는 코드를 읽거나 쓰면 상태 카드에 코드 아래에 뜻(예: "우회전 90도")이 같이 표시됩니다. 현장 전용 코드는 뜻이 비어 있어도 정상입니다.</p>
+
+<!-- ===================================================================== -->
+<h2 id="read"><span class="num">9</span>태그 읽기</h2>
+<p>읽기는 버튼을 누를 필요가 없습니다. <b>앱을 켜 둔 채 휴대폰 뒷면을 태그에 대면</b> 바로 읽습니다.</p>
+<ol class="steps">
+  <li><b>앱을 열고 태그 탭에서 상태 카드가 <span class="quote">"읽기 대기"</span>인지 확인합니다.</b></li>
+  <li><b>휴대폰 뒷면 가운데~위쪽을 태그에 바짝 댑니다.</b> 1초 정도면 "삑" 소리와 짧은 진동이 울리고, 카드가 초록색 <span class="quote">"읽기 완료"</span>로 바뀌며 코드가 크게 보입니다. 읽은 시각이 "14:31:02에 읽음"처럼 초 단위까지 표시됩니다.</li>
+  <li><b>읽은 코드를 입력 칸으로 가져오려면 초록 카드를 한 번 누르세요.</b> 코드 입력 칸이 그 코드로 바뀝니다. (읽은 태그와 같은 값을 다른 태그에 쓰거나, 번호만 조금 바꿔 쓸 때 편합니다.)</li>
+</ol>
+<div class="box tip"><b class="t">인식이 잘 안 되면</b>
+  <ul style="margin:4px 0 0">
+    <li>휴대폰마다 NFC 안테나 위치가 다릅니다. 보통 <b>뒷면 가운데</b>나 <b>카메라 바로 아래</b>입니다. 천천히 위아래로 움직여 잘 되는 위치를 찾아 두세요.</li>
+    <li>두꺼운 케이스, 카드 지갑형 케이스, 금속 플레이트(거치대용 자석판)가 붙어 있으면 잘 안 됩니다. 벗기고 해 보세요.</li>
+    <li>읽는 도중 휴대폰을 떼면 <span class="quote">"통신 오류 — 태그가 떨어졌어요"</span>가 나옵니다. 다시 대면 됩니다.</li>
+  </ul>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="write"><span class="num">10</span>태그에 쓰기 (1장)</h2>
+<h3>10-1. 쓸 코드 넣기 — 네 가지 방법 중 편한 것으로</h3>
+<table>
+  <tr><th style="width:30%">방법</th><th>하는 법</th></tr>
+  <tr><td><b>프리셋 누르기</b> (가장 빠름)</td><td>프리셋 칸(<code>0T01</code> <code>0T04</code> …)을 누르면 그 코드가 바로 들어갑니다. 선택된 칸은 파란 테두리로 표시됩니다.</td></tr>
+  <tr><td><b>목록에서 고르기</b></td><td>코드 입력 오른쪽 <kbd>목록</kbd> → 원하는 코드(예: "우회전 90도")를 누릅니다.</td></tr>
+  <tr><td><b>번호만 바꾸기</b></td><td>번호 칸 옆 <kbd>−</kbd> <kbd>+</kbd> 버튼으로 숫자를 1씩 바꿉니다. 장갑을 끼고도 누를 수 있게 크게 만들었습니다.</td></tr>
+  <tr><td><b>직접 입력</b></td><td>번호 칸을 누르면 키패드가 나옵니다. 두 자리 숫자를 치세요. 첫째 자리 칸은 0~9, A~F 한 글자. 가운데 커맨드 타입 칸은 누르면 <code>T</code> <code>I</code> <code>O</code> <code>B</code> <code>D</code> 중에서 고르는 메뉴가 나옵니다.</td></tr>
+  <tr><td><b>읽은 값 가져오기</b></td><td>태그를 읽은 뒤 초록 상태 카드를 누르면 그 코드가 입력 칸에 들어갑니다. 최근 작업 줄을 눌러도 됩니다.</td></tr>
+</table>
+<div class="box tip"><b class="t">I ↔ O 빠르게 바꾸기</b>커맨드 타입이 <code>I</code>나 <code>O</code>일 때 그 칸을 <b>길게 누르면</b> 서로 바뀝니다. 교통제어 IN/OUT 태그를 번갈아 쓸 때 메뉴를 열지 않아도 됩니다.</div>
+
+<h3>10-2. 쓰기</h3>
+<ol class="steps">
+  <li><b>입력 칸에 원하는 코드가 들어 있는지 확인합니다.</b> 맨 아래 <kbd>쓰기</kbd> 버튼에도 같은 코드가 표시됩니다.</li>
+  <li><b><kbd>쓰기</kbd> 버튼을 <u>짧게</u> 한 번 누릅니다.</b> 상태 카드가 주황색 <span class="quote">"쓰기 대기 — 쓸 태그에 휴대폰을 대세요"</span>로 바뀝니다.</li>
+  <li><b>5초 안에 휴대폰 뒷면을 태그에 댑니다.</b> "삑" 소리와 함께 파란색 <span class="quote">"쓰기 완료"</span>가 나오고, 아래에 <span class="quote">"0T01 → 0T21 · 검증 OK"</span>처럼 <b>이전 값 → 새 값</b>이 표시됩니다.
+    <div class="box tip"><b class="t">검증 OK란?</b>쓴 직후 태그를 한 번 더 읽어서 정말 그 값이 들어갔는지 확인했다는 뜻입니다. 기본으로 켜져 있고, 설정에서 끌 수 있습니다.</div></li>
+</ol>
+<div class="box warn"><b class="t">주의</b>
+  <ul style="margin:4px 0 0">
+    <li>쓰기는 태그의 <b>기존 값을 덮어씁니다.</b> 엉뚱한 태그에 대지 않도록 쓰기 대기 중에는 휴대폰을 다른 태그 근처에 두지 마세요.</li>
+    <li>쓰기 대기 상태에서 태그를 대지 않고 5초가 지나면 <span class="quote">"시간 초과"</span>가 되고 아무것도 쓰지 않습니다. 다시 <kbd>쓰기</kbd>를 누르면 됩니다.</li>
+    <li>쓰기 대기를 취소하려면 맨 아래의 <kbd>쓰기 취소</kbd>를 누르세요.</li>
+    <li><span class="quote">"검증 실패 — 0T21 ≠ 0T01"</span>이 나오면 쓰는 도중 휴대폰이 떨어진 것입니다. 태그를 더 안정적으로 대고 한 번 더 쓰세요.</li>
+  </ul>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="cont"><span class="num">11</span>연속 쓰기 (여러 장에 같은 값)</h2>
+<p>같은 코드를 태그 여러 장에 써야 할 때, 매번 <kbd>쓰기</kbd>를 누르지 않고 <b>태그만 차례로 대면</b> 됩니다.</p>
+<figure>
+  <img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/08_cont_running.png" alt="연속 쓰기 중 화면. 맨 아래 버튼이 보라색 '연속 쓰기 종료'로 바뀌어 있다.">
+  <figcaption>연속 쓰기 중에는 맨 아래 버튼이 보라색 <kbd>연속 쓰기 종료</kbd>로 바뀝니다.</figcaption>
+</figure>
+<ol class="steps">
+  <li><b>쓸 코드를 입력 칸에 넣습니다.</b></li>
+  <li><b>맨 아래 <kbd>쓰기</kbd> 버튼을 <u>길게</u>(1초쯤) 누르고 있습니다.</b> 진동이 울리고 상태 카드가 보라색 <span class="quote">"연속 쓰기 중 — 다음 태그를 대세요"</span>로 바뀝니다.</li>
+  <li><b>태그를 한 장씩 차례로 댑니다.</b> 한 장이 끝나면 "삑" 소리와 <span class="quote">"쓰기 완료"</span>가 잠깐 보였다가 1초 뒤 자동으로 다시 <span class="quote">"연속 쓰기 중"</span>으로 돌아갑니다. 그러면 다음 태그를 대세요. 연속 쓰기 중에는 시간 제한이 없습니다.</li>
+  <li><b>다 썼으면 맨 아래 <kbd>연속 쓰기 종료</kbd>를 누릅니다.</b></li>
+</ol>
+<div class="box warn"><b class="t">주의</b>연속 쓰기 중에는 <b>휴대폰이 닿는 모든 태그에 같은 값이 써집니다.</b> 끝났으면 반드시 <kbd>연속 쓰기 종료</kbd>를 누르고, 종료 전에는 다른 태그 위를 지나가지 않도록 하세요. 연속 쓰기 중에 입력 칸의 코드를 바꾸면 그 뒤부터는 바뀐 코드가 써집니다.</div>
+
+<!-- ===================================================================== -->
+<h2 id="undo"><span class="num">12</span>잘못 썼을 때 되돌리기</h2>
+<p>쓰기 완료 직후 상태 카드 아래에 <kbd>되돌리기 (0T01)</kbd>처럼 <b>이전 값</b>이 적힌 버튼이 보입니다.</p>
+<ol class="steps">
+  <li><b><kbd>되돌리기 (이전 값)</kbd>를 누릅니다.</b> 이전 값으로 "쓰기 대기" 상태가 됩니다.</li>
+  <li><b>방금 썼던 <u>같은</u> 태그에 다시 댑니다.</b> 이전 값으로 돌아갑니다.</li>
+</ol>
+<p>되돌리기 버튼은 값이 실제로 바뀐 직후에만 나옵니다. 이미 다른 태그를 읽거나 쓴 뒤라면 <a href="#history">작업 기록</a>에서 이전 값을 확인해 직접 다시 쓰세요. (기록 줄에 "0T01 → 0T21"처럼 남아 있습니다.)</p>
+
+<!-- ===================================================================== -->
+<h2 id="preset"><span class="num">13</span>프리셋 (자주 쓰는 코드 저장)</h2>
+<p>프리셋 칸 5개에는 처음에 <code>0T01</code> <code>0T04</code> <code>0T07</code> <code>0T21</code> <code>0T22</code>가 들어 있습니다. 현장에 맞게 바꿀 수 있습니다.</p>
+<ul>
+  <li><b>불러오기:</b> 칸을 짧게 누르면 그 코드가 입력 칸에 들어갑니다.</li>
+  <li><b>저장하기 (방법 1):</b> 먼저 입력 칸에 저장할 코드를 넣고, 프리셋 칸을 <b>길게</b> 누릅니다. "프리셋 저장됨: 0T05"라고 뜹니다.</li>
+  <li><b>저장하기 (방법 2):</b> 프리셋 오른쪽 <kbd>편집</kbd>을 누르면 칸들이 주황 테두리로 바뀝니다. 이때 칸을 짧게 누르면 현재 입력 칸의 코드가 저장됩니다. 다 됐으면 <kbd>완료</kbd>.</li>
+</ul>
+<p>프리셋은 휴대폰에 저장되므로 앱을 껐다 켜도 그대로입니다.</p>
+
+<!-- ===================================================================== -->
+<h2 id="history"><span class="num">14</span>작업 기록</h2>
+<p>읽고 쓴 내용이 시각(시:분:초)과 함께 자동으로 남습니다. 프리셋 아래 <b>최근 작업</b>에 3건이 보이고, <kbd>전체</kbd>를 누르면 전체 기록(최근 100건)이 나옵니다.</p>
+<table>
+  <tr><th style="width:30%">표시</th><th>뜻</th></tr>
+  <tr><td>🟢 읽기 <code>0T21</code></td><td>태그를 읽음</td></tr>
+  <tr><td>🔵 쓰기 <code>0T01 → 0T21</code></td><td>0T01이던 태그에 0T21을 씀 (검증까지 통과)</td></tr>
+  <tr><td>🔵 쓰기 <code>= 0T21</code></td><td>이미 같은 값이던 태그에 다시 씀</td></tr>
+  <tr><td>🔴 검증 실패</td><td>썼지만 다시 읽은 값이 달랐음 → 다시 써야 함</td></tr>
+  <tr><td>🔴 시간 초과 <code>0T21</code></td><td>쓰기 대기 5초 동안 태그를 대지 않음 (아무것도 안 써짐)</td></tr>
+</table>
+<ul>
+  <li>기록 줄을 누르면 그 코드가 입력 칸에 들어갑니다.</li>
+  <li>전체 기록 화면 위쪽의 <kbd>모두 지우기</kbd>로 기록을 비울 수 있습니다.</li>
+  <li>메인 화면에 최근 작업이 안 보이게 하려면 설정 → <b>메인 화면 이력 표시</b>를 끄세요.</li>
+</ul>
+
+<!-- ===================================================================== -->
+<h2 id="settings"><span class="num">15</span>설정 항목 설명</h2>
+<figure>
+  <img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/14_settings.png" alt="설정 화면">
+</figure>
+<table>
+  <tr><th style="width:32%">항목</th><th>설명</th></tr>
+  <tr><th colspan="2">화면</th></tr>
+  <tr><td>테마</td><td>라이트 / 다크(기본) / 시스템 설정 따름. 밝은 현장에서는 라이트가 잘 보입니다.</td></tr>
+  <tr><td>화면 효과</td><td>흐림·그라데이션 효과. <b>자동</b>이면 휴대폰 성능에 맞춰 알아서 정합니다. 화면이 버벅이면 <b>저사양</b>으로 바꾸세요.</td></tr>
+  <tr><td>언어</td><td>한국어 / English</td></tr>
+  <tr><td>메인 화면 이력 표시</td><td>태그 탭 아래쪽 "최근 작업" 표시 여부</td></tr>
+  <tr><th colspan="2">피드백</th></tr>
+  <tr><td>진동</td><td>성공 시 짧게, 오류 시 길게</td></tr>
+  <tr><td>소리</td><td>성공·오류 시 비프음. 시끄러운 현장에서는 진동만 켜 두는 것도 방법입니다.</td></tr>
+  <tr><th colspan="2">NFC</th></tr>
+  <tr><td>쓰기 후 자동 검증</td><td>쓴 직후 다시 읽어 확인. <b>켜 두기를 권장</b>합니다. 끄면 조금 빨라지지만 잘못 써진 것을 알 수 없습니다.</td></tr>
+  <tr><td>커맨드 타입</td><td>코드 가운데 글자로 쓸 수 있는 알파벳. 기본 <code>TIOBD</code>. 현장에서 쓰는 글자만 남기면 메뉴가 짧아집니다.</td></tr>
+  <tr><th colspan="2">데이터</th></tr>
+  <tr><td>크래시 로그</td><td>앱이 갑자기 꺼졌을 때의 기록. 문의할 때 <kbd>공유</kbd>로 보내 주시면 원인을 찾는 데 도움이 됩니다.</td></tr>
+  <tr><td style="color:var(--red)">전체 초기화</td><td>작업 기록·프리셋·설정을 모두 지우고 처음 상태로 되돌립니다. 되돌릴 수 없습니다.</td></tr>
+  <tr><th colspan="2">정보</th></tr>
+  <tr><td>앱 버전</td><td>지금 설치된 버전과 빌드 번호</td></tr>
+  <tr><td>업데이트 확인</td><td>새 버전 확인. <a href="#update">6번</a> 참고</td></tr>
+</table>
+
+<!-- ===================================================================== -->
+<h2 id="guide"><span class="num">16</span>앱 안의 가이드·에러 코드</h2>
+<p>아래쪽 <kbd>가이드</kbd> 탭에는 이 설명서의 요약(앱 안내)과 <b>AGV 에러 코드 표</b>가 있습니다.</p>
+<div class="shots">
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/12_guide_errors.png" alt="에러 코드 목록"><figcaption>가이드 → 에러 코드</figcaption></figure>
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/13_error_dialog.png" alt="에러 코드 상세 창"><figcaption>코드를 누르면 조치 방법이 나옵니다</figcaption></figure>
+</div>
+<p>AGV 표시창에 <code>E257</code> 같은 코드가 떴을 때 <kbd>가이드</kbd> → <kbd>에러 코드</kbd>에서 그 코드를 누르면 <b>원인과 조치 순서</b>가 나옵니다. 태그 작업과 상관없이 현장에서 참고용으로 쓰시면 됩니다.</p>
+
+<!-- ===================================================================== -->
+<h2 id="faq"><span class="num">17</span>자주 생기는 문제와 해결</h2>
+<details><summary>태그를 대도 아무 반응이 없어요</summary>
+  <ol>
+    <li>상태 카드가 빨간 <span class="quote">"NFC 꺼짐"</span>이면 NFC를 켜세요 (<a href="#first">4번</a>).</li>
+    <li>앱이 <b>화면에 떠 있어야</b> 읽습니다. 다른 앱이 앞에 있거나 화면이 꺼져 있으면 읽지 않습니다.</li>
+    <li>휴대폰 뒷면의 다른 위치로 천천히 옮겨 보세요. 케이스·금속판을 떼어 보세요.</li>
+    <li>태그 자체가 손상됐을 수 있습니다. 정상인 다른 태그로 시험해 보세요.</li>
+  </ol>
+</details>
+<details><summary>"통신 오류 — 태그가 떨어졌어요"</summary>
+  <p>읽거나 쓰는 도중에 휴대폰이 태그에서 떨어진 것입니다. 소리가 날 때까지 휴대폰을 움직이지 말고 다시 대세요. 쓰기 중이었다면 <a href="#history">작업 기록</a>에 "쓰기"가 남았는지 확인하고, 없으면 다시 쓰세요.</p>
+</details>
+<details><summary>"검증 실패"가 자주 나요</summary>
+  <p>쓰기는 됐지만 확인 읽기에서 값이 다르게 나온 경우입니다. 대부분 휴대폰을 너무 빨리 뗀 것입니다. 소리가 난 뒤 0.5초 정도 더 대고 있어 보세요. 같은 태그에서 계속 실패하면 태그 불량일 수 있습니다.</p>
+</details>
+<details><summary>"시간 초과"가 나요</summary>
+  <p><kbd>쓰기</kbd>를 누른 뒤 5초 안에 태그를 대지 않은 것입니다. 태그에 휴대폰을 먼저 가져간 다음 <kbd>쓰기</kbd>를 누르는 순서로 하면 편합니다. 아무것도 써지지 않았으니 그냥 다시 하면 됩니다.</p>
+</details>
+<details><summary>엉뚱한 태그에 써 버렸어요</summary>
+  <p>쓰기 완료 직후라면 <kbd>되돌리기</kbd>를 누르고 그 태그에 다시 대세요 (<a href="#undo">12번</a>). 시간이 지났다면 작업 기록에서 "이전 값 → 새 값"을 보고 이전 값을 직접 다시 쓰세요.</p>
+</details>
+<details><summary>연속 쓰기가 안 켜져요 (짧게 눌러도 1장만 써요)</summary>
+  <p><kbd>쓰기</kbd> 버튼을 <b>1초 정도 꾹</b> 누르고 있어야 합니다. 진동이 울리고 카드가 보라색으로 바뀌면 켜진 것입니다. 손을 너무 빨리 떼면 1장 쓰기로 동작합니다.</p>
+</details>
+<details><summary>업데이트 확인이 "확인 실패"로 나와요</summary>
+  <p>인터넷 연결을 확인하세요. 회사 와이파이는 외부 사이트를 막는 경우가 많으니 <b>모바일 데이터</b>로 바꿔서 다시 눌러 보세요. 새 버전을 올리는 중인 1~2분 사이에도 잠깐 실패할 수 있습니다.</p>
+</details>
+<details><summary>업데이트를 받았는데 설치 화면이 안 열려요</summary>
+  <p><span class="quote">"설치 허용이 필요해요"</span> 창에서 <kbd>설정 열기</kbd> → <kbd>이 출처 허용</kbd>을 켜고 <kbd>◀ 뒤로</kbd>로 앱에 돌아와야 설치 화면이 열립니다. 그래도 안 되면 앱을 완전히 닫고 다시 열어 <kbd>설정</kbd> → <kbd>업데이트 확인</kbd>을 한 번 더 누르세요.</p>
+</details>
+<details><summary>화면이 느리거나 버벅여요</summary>
+  <p><kbd>설정</kbd> → <b>화면 효과</b> → <kbd>저사양</kbd>으로 바꾸세요. 흐림·그림자 효과를 꺼서 오래된 휴대폰에서도 부드럽게 동작합니다.</p>
+</details>
+<details><summary>앱이 갑자기 꺼졌어요</summary>
+  <p>다시 열면 됩니다. 반복되면 <kbd>설정</kbd> → <b>크래시 로그</b> → <kbd>공유</kbd>로 기록을 담당자에게 보내 주세요. 앱 버전(설정 맨 아래)도 함께 알려 주세요.</p>
+</details>
+
+<!-- ===================================================================== -->
+<h2 id="uninstall"><span class="num">18</span>앱 지우기</h2>
+<ol class="steps">
+  <li><b>홈 화면이나 앱 목록에서 <b>AGV Tag Reader</b> 아이콘을 길게 누릅니다.</b></li>
+  <li><b><kbd>삭제</kbd>(또는 <kbd>제거</kbd>, 휴지통 모양)를 누르고 <kbd>확인</kbd>.</b></li>
+</ol>
+<p>작업 기록과 프리셋도 함께 지워집니다. 3-1에서 켰던 "이 출처 허용"은 앱을 지워도 그대로 남으니, 원하면 휴대폰 <kbd>설정</kbd> → <kbd>앱</kbd> → 크롬 → <kbd>알 수 없는 앱 설치</kbd>에서 다시 끌 수 있습니다.</p>
+
+<footer>
+  <p>AGV Tag Reader · 설치 파일과 최신 버전: <a href="https://github.com/Leepy0/AGV_RFID_Manager_/releases/tag/latest-debug">GitHub Release</a><br>
+  이 설명서 주소: <a href="https://leepy0.github.io/AGV_RFID_Manager_/">leepy0.github.io/AGV_RFID_Manager_</a></p>
+</footer>
+
+</main>
+<a class="top" href="#top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">↑ 맨 위로</a>
+
+<script>
+// 최신 APK 주소를 GitHub에서 받아 다운로드 버튼에 바로 연결 (실패하면 Release 페이지로 감)
+(function () {
+  var btn = document.getElementById('dl'), ver = document.getElementById('dl-ver');
+  fetch('https://api.github.com/repos/Leepy0/AGV_RFID_Manager_/releases/tags/latest-debug')
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (rel) {
+      var apk = (rel.assets || []).filter(function (a) { return /\.apk$/i.test(a.name); })[0];
+      if (!apk) throw new Error('no apk');
+      btn.href = apk.browser_download_url;
+      var m = /v([\d.]+)\.apk$/i.exec(apk.name);
+      ver.textContent = (m ? 'v' + m[1] + ' · ' : '') + (apk.size / 1048576).toFixed(1) + ' MB · 누르면 바로 내려받습니다';
+    })
+    .catch(function () {
+      ver.textContent = 'GitHub 페이지가 열리면 Assets 아래의 .apk 파일을 누르세요';
+    });
+})();
+</script>
+</body>
+</html>
