@@ -87,6 +87,32 @@
   .code-parts span { flex: 1 1 0; max-width: 150px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; }
   .code-parts b { display: block; font-size: 22px; color: var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; }
   .top { position: fixed; right: 14px; bottom: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; text-decoration: none; font-size: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.12); color: var(--ink); }
+  /* 예시 화면 (휴대폰 대화상자 모형) */
+  .mock { margin: 14px auto 18px; max-width: 340px; }
+  .mock-phone { background: #2b2f38; border-radius: 22px; padding: 26px 14px; }
+  .mock-dlg { background: #fff; color: #1b1d22; border-radius: 18px; padding: 18px 18px 12px; font-size: 15px; line-height: 1.55; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  .mock-dlg .ttl { font-weight: 700; font-size: 17px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .mock-dlg .ic { display: inline-flex; width: 28px; height: 28px; border-radius: 8px; align-items: center; justify-content: center; font-size: 16px; background: #e9f0fd; }
+  .mock-dlg p { margin: 0 0 10px; word-break: keep-all; }
+  .mock-btns { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .mock-btns span { color: #2b6fe6; font-weight: 700; padding: 8px 12px; border-radius: 10px; }
+  .mock-btns span.fill { background: #2b6fe6; color: #fff; }
+  .mock-list { background: #fff; color: #1b1d22; border-radius: 18px; overflow: hidden; font-size: 15px; }
+  .mock-list .hd { padding: 14px 18px 6px; font-size: 19px; font-weight: 700; }
+  .mock-list .row { display: flex; align-items: center; justify-content: space-between; padding: 13px 18px; border-top: 1px solid #eceef2; gap: 10px; }
+  .mock-list .row small { display: block; color: #6b7280; font-size: 13px; }
+  .sw { display: inline-block; width: 46px; height: 26px; border-radius: 13px; background: #c4c8d0; position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .sw.on { background: #2b6fe6; } .sw.on::after { left: 23px; }
+  .hit { position: relative; outline: 3px solid var(--red); outline-offset: 3px; border-radius: 10px; }
+  .hit::after { content: "여기를 누르세요"; position: absolute; left: 50%; top: -34px; transform: translateX(-50%); background: var(--red); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 8px; white-space: nowrap; }
+  .hit.below::after { top: auto; bottom: -34px; }
+  .hit.sw::after { content: ""; left: 23px; top: 3px; transform: none; background: #fff; padding: 0; width: 20px; height: 20px; border-radius: 50%; }
+  .hit.sw:not(.on)::after { left: 3px; }
+  .mock-cap { text-align: center; font-size: 13px; color: var(--ink3); margin-top: 8px; }
+  /* 화면 번호 표시 */
+  .annot { position: relative; display: inline-block; }
+  .annot .n { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--red); color: #fff; font-weight: 800; font-size: 15px; line-height: 26px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.4); transform: translate(-50%, -50%); }
   footer { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--ink3); font-size: 14px; }
   details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; margin: 10px 0; }
   summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
@@ -149,10 +175,15 @@
     <div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
       <span class="quote">"이 파일 형식은 휴대전화에 해를 끼칠 수 있습니다. AGV_RFID_Manager_….apk 파일을 유지하시겠습니까?"</span><br>
       → <kbd>유지</kbd> 또는 <kbd>다운로드</kbd>를 누릅니다. (크롬 기준. 삼성 인터넷은 <span class="quote">"파일이 휴대전화에 해를 끼칠 수 있습니다"</span> → <kbd>다운로드</kbd>)<br>
-      앱 설치 파일(.apk)을 받을 때 항상 나오는 문구입니다. 이 앱 자체에 문제가 있다는 뜻이 아닙니다.</div></li>
+      앱 설치 파일(.apk)을 받을 때 항상 나오는 문구입니다. 이 앱 자체에 문제가 있다는 뜻이 아닙니다.</div>
+    <div class="mock"><div class="mock-phone"><div class="mock-dlg">
+      <p>이 파일 형식은 휴대전화에 해를 끼칠 수 있습니다. <b>AGV_RFID_Manager_v2.3.1.apk</b> 파일을 유지하시겠습니까?</p>
+      <div class="mock-btns"><span>취소</span><span class="hit">유지</span></div>
+    </div></div><div class="mock-cap">예시 화면 (크롬). 삼성 인터넷은 버튼 이름이 "다운로드"입니다.</div></div></li>
   <li><b>다운로드가 끝나면 알림이 뜹니다. 알림을 누르거나 <kbd>열기</kbd>를 누릅니다.</b>
     <div class="box tip"><b class="t">알림을 놓쳤다면</b>
-      휴대폰의 <b>내 파일</b>(또는 <b>파일</b>) 앱을 열고 → <b>다운로드</b> 폴더 → <code>AGV_RFID_Manager_v….apk</code> 파일을 누르세요. 크롬에서는 오른쪽 위 <kbd>⋮</kbd> → <kbd>다운로드</kbd>에서도 찾을 수 있습니다.</div></li>
+      휴대폰의 <b>내 파일</b>(또는 <b>파일</b>) 앱을 열고 → <b>다운로드</b> 폴더 → <code>AGV_RFID_Manager_v….apk</code> 파일을 누르세요. 크롬에서는 오른쪽 위 <kbd>⋮</kbd> → <kbd>다운로드</kbd>에서도 찾을 수 있습니다.</div>
+    <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/30_files_download.png" alt="파일 앱의 다운로드 폴더에서 설치 파일을 찾은 모습. 이 파일을 누르면 설치가 시작됩니다."><figcaption>파일 앱의 다운로드 폴더에서 설치 파일을 찾은 모습. 이 파일을 누르면 설치가 시작됩니다.</figcaption></figure></li>
 </ol>
 
 <!-- ===================================================================== -->
@@ -163,6 +194,13 @@
 <div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
   <span class="quote">"보안상의 이유로 휴대전화에서 이 출처의 알 수 없는 앱을 설치할 수 없도록 설정되어 있습니다."</span><br>
   또는 <span class="quote">"출처를 알 수 없는 앱 설치 — 보안을 위해 … 허용되지 않습니다."</span></div>
+<div class="box screen"><b class="t">대신 이런 문구가 보이면 (일부 휴대폰)</b>
+  <span class="quote">"휴대전화와 개인 데이터는 알 수 없는 앱의 공격에 더욱 취약합니다. 이 앱을 설치하면 … 사용자가 책임을 진다는 것에 동의하게 됩니다."</span><br>
+  → <kbd>계속</kbd>을 누르면 바로 3-2로 넘어갑니다. 아래 1~3단계는 건너뛰세요.</div>
+<div class="shots">
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/31_install_consent.png" alt=""계속" 창이 나오는 휴대폰: 계속을 누르면 됩니다."><figcaption>"계속" 창이 나오는 휴대폰: 계속을 누르면 됩니다.</figcaption></figure>
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/25_unknown_sources.png" alt=""설정"을 누르면 나오는 화면. 스위치를 켜고 뒤로 가세요. (휴대폰에 따라 "이 출처 허용" 또는 "이 소스에서 가져온 앱 설치 허용"으로 적혀 있습니다.)"><figcaption>"설정"을 누르면 나오는 화면. 스위치를 켜고 뒤로 가세요. (휴대폰에 따라 "이 출처 허용" 또는 "이 소스에서 가져온 앱 설치 허용"으로 적혀 있습니다.)</figcaption></figure>
+</div>
 <ol class="steps">
   <li><b>그 화면의 <kbd>설정</kbd> 버튼을 누릅니다.</b> (설정 앱이 자동으로 열립니다.)</li>
   <li><b>"이 출처 허용" 스위치를 켭니다.</b> 스위치가 파란색(또는 초록색)이 되면 켜진 것입니다.
@@ -174,6 +212,10 @@
 <div class="box screen"><b class="t">화면에 이런 문구가 보이면</b>
   <span class="quote">"AGV Tag Reader — 이 애플리케이션을 설치하시겠습니까?"</span><br>
   → <kbd>설치</kbd>를 누릅니다. 몇 초 뒤 <span class="quote">"앱이 설치되었습니다"</span>가 나오면 끝입니다. <kbd>열기</kbd>를 누르세요.</div>
+<div class="shots">
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/34_install_confirm.png" alt=""설치하시겠습니까?" → 설치"><figcaption>"설치하시겠습니까?" → 설치</figcaption></figure>
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/35_install_done.png" alt=""앱이 설치되었습니다" → 열기"><figcaption>"앱이 설치되었습니다" → 열기</figcaption></figure>
+</div>
 <p>이미 이 앱이 깔려 있는 휴대폰이라면 <span class="quote">"기존 애플리케이션을 업데이트하시겠습니까? 기존 데이터는 삭제되지 않습니다."</span>라고 나옵니다. 마찬가지로 <kbd>설치</kbd>(또는 <kbd>업데이트</kbd>)를 누르면 됩니다. 작업 기록과 설정은 그대로 남습니다.</p>
 
 <h3>3-3. Play 프로텍트 경고 — "인식할 수 없는 앱" / "앱을 차단했습니다"</h3>
@@ -182,9 +224,26 @@
   <span class="quote">"Play 프로텍트에서 이 앱을 차단했습니다 / 이 앱은 알 수 없는 개발자가 만든 앱입니다"</span><br>
   → 작은 글씨의 <kbd>자세히 알아보기</kbd>(또는 <kbd>세부정보</kbd>)를 먼저 누르면 아래에 <kbd>무시하고 설치</kbd> 버튼이 나타납니다. 그것을 누르세요.<br>
   <kbd>무시하고 설치</kbd>가 바로 보이면 그냥 누르면 됩니다.</div>
+<div class="shots">
+  <div class="mock"><div class="mock-phone"><div class="mock-dlg">
+    <div class="ttl"><span class="ic">🛡️</span>앱을 차단했습니다</div>
+    <p>이 앱은 알 수 없는 개발자가 만든 앱입니다. Play 프로텍트가 이 앱을 인식하지 못합니다.</p>
+    <div class="mock-btns"><span class="hit below">자세히 알아보기</span><span class="fill">확인</span></div>
+  </div></div><div class="mock-cap">① 먼저 "자세히 알아보기"를 누르면…</div></div>
+  <div class="mock"><div class="mock-phone"><div class="mock-dlg">
+    <div class="ttl"><span class="ic">🛡️</span>앱을 차단했습니다</div>
+    <p>이 앱은 알 수 없는 개발자가 만든 앱입니다. 안전하지 않을 수 있는 앱의 설치를 차단했습니다.</p>
+    <div class="mock-btns"><span class="hit below">무시하고 설치</span><span class="fill">확인</span></div>
+  </div></div><div class="mock-cap">② "무시하고 설치"가 나타납니다</div></div>
+</div>
 <div class="box screen"><b class="t">② "앱을 검사(스캔)하세요"라고 나올 때</b>
   <span class="quote">"설치하기 전에 앱을 검사하는 것이 좋습니다"</span> → <kbd>검사</kbd>(스캔)를 누르고 잠시 기다립니다. <span class="quote">"유해한 앱이 없습니다"</span>가 나오면 <kbd>설치</kbd>를 누르세요.<br>
   <kbd>검사하지 않고 설치</kbd>가 보이면 그것을 눌러도 됩니다.</div>
+<div class="mock"><div class="mock-phone"><div class="mock-dlg">
+  <div class="ttl"><span class="ic">🛡️</span>앱 검사 권장</div>
+  <p>이 앱은 Play 프로텍트에서 아직 확인하지 않은 앱입니다. 설치하기 전에 앱을 검사하는 것이 좋습니다.</p>
+  <div class="mock-btns"><span>설치하지 않음</span><span class="hit fill">검사</span></div>
+</div></div><div class="mock-cap">예시 화면. 검사가 끝나면 "설치" 버튼이 나옵니다.</div></div>
 <div class="box screen"><b class="t">③ 설치가 끝난 뒤 "검사를 위해 보내시겠습니까?"라고 나올 때</b>
   <kbd>보내지 않음</kbd>을 눌러도 되고 <kbd>보내기</kbd>를 눌러도 됩니다. 어느 쪽이든 앱 사용에는 영향이 없습니다.</div>
 <div class="box tip"><b class="t">왜 이런 경고가 나오나요?</b>이 앱은 플레이스토어에 등록하지 않고 회사 저장소에서 직접 배포하기 때문에, 구글 입장에서는 "모르는 앱"입니다. 앱이 위험하다는 뜻이 아니라, 구글이 검사한 적이 없다는 뜻입니다.</div>
@@ -199,8 +258,14 @@
   <li><b><kbd>자동 차단</kbd>을 누르고, 맨 위의 스위치를 끕니다.</b></li>
   <li><b>내려받은 파일을 다시 눌러 설치합니다.</b> 설치가 끝난 뒤에는 자동 차단을 다시 켜도 됩니다. (이미 설치된 앱과 앱 안의 업데이트에는 영향이 없습니다.)</li>
 </ol>
+<div class="mock"><div class="mock-phone"><div class="mock-list">
+  <div class="hd">자동 차단</div>
+  <div class="row"><div><b>사용 안 함</b><small>휴대전화를 위협으로부터 보호합니다</small></div><span class="sw hit"></span></div>
+  <div class="row"><div>승인되지 않은 출처의 앱 설치 차단<small>자동 차단이 꺼지면 함께 해제됩니다</small></div><span class="sw"></span></div>
+</div></div><div class="mock-cap">예시 화면. 설정 → 보안 및 개인정보 보호 → 자동 차단. 맨 위 스위치를 끕니다.</div></div>
 
 <div class="box ok"><b class="t">설치 완료!</b>홈 화면이나 앱 목록에 <b>AGV Tag Reader</b> 아이콘이 생겼으면 성공입니다. 아이콘을 눌러 다음 단계로 가세요.</div>
+<figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/36_app_drawer.png" alt="홈 화면에서 위로 쓸어 올리면 나오는 앱 목록. 여기서 AGV Tag Reader 아이콘을 찾으세요."><figcaption>홈 화면에서 위로 쓸어 올리면 나오는 앱 목록. 여기서 AGV Tag Reader 아이콘을 찾으세요.</figcaption></figure>
 
 <!-- ===================================================================== -->
 <h2 id="first"><span class="num">4</span>처음 실행하기 — NFC 켜기</h2>
@@ -214,6 +279,11 @@
   <li><b><kbd>NFC 및 비접촉 결제</kbd>(또는 <kbd>NFC</kbd>) 스위치를 켭니다.</b></li>
   <li><b><kbd>◀ 뒤로</kbd>를 눌러 앱으로 돌아옵니다.</b> 카드가 파란색 <span class="quote">"읽기 대기"</span>로 바뀌면 준비 완료입니다.</li>
 </ol>
+<div class="mock"><div class="mock-phone"><div class="mock-list">
+  <div class="hd">NFC 및 비접촉 결제</div>
+  <div class="row"><div><b>사용 중</b></div><span class="sw on hit"></span></div>
+  <div class="row"><div>비접촉 결제<small>삼성페이</small></div><span style="color:#6b7280">›</span></div>
+</div></div><div class="mock-cap">예시 화면 (갤럭시). 이렇게 스위치가 켜져 있으면 됩니다.</div></div>
 <div class="box tip"><b class="t">직접 찾아가려면</b>휴대폰 <kbd>설정</kbd> → <kbd>연결</kbd> → <kbd>NFC 및 비접촉 결제</kbd> → 켜기. 화면 위에서 아래로 내려 나오는 빠른 설정 패널에 <b>NFC</b> 버튼이 있는 휴대폰도 많습니다.</div>
 
 <h3>이 앱이 쓰는 권한 (안심하셔도 됩니다)</h3>
@@ -251,6 +321,8 @@
 <div class="shots">
   <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/22_update_dialog.png" alt="업데이트가 있어요 창"><figcaption>새 버전이 있을 때 뜨는 창</figcaption></figure>
   <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/24_update_need_permission.png" alt="설치 허용이 필요해요 창"><figcaption>처음 한 번만 나오는 허용 요청</figcaption></figure>
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/26_installer.png" alt=""업데이트를 설치하시겠습니까? 기존 데이터는 유지됩니다" → 설치"><figcaption>"업데이트를 설치하시겠습니까? 기존 데이터는 유지됩니다" → 설치</figcaption></figure>
+  <figure><img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/27_after_install.png" alt=""앱이 설치되었습니다" → 열기"><figcaption>"앱이 설치되었습니다" → 열기</figcaption></figure>
 </div>
 <ol class="steps">
   <li><b><span class="quote">"업데이트가 있어요"</span> 창이 뜨면 <kbd>업데이트</kbd>를 누릅니다.</b>
@@ -276,18 +348,26 @@
 <!-- ===================================================================== -->
 <h2 id="screen"><span class="num">7</span>화면 구성 한눈에 보기</h2>
 <figure>
-  <img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/06_after_pick.png" alt="태그 탭 전체 화면">
-  <figcaption>태그 탭. (이 설명서의 그림은 NFC가 없는 시험용 기기에서 찍어 맨 위 카드가 "NFC 꺼짐"으로 나옵니다. 실제 휴대폰에서는 파란 "읽기 대기"로 보입니다.)</figcaption>
+  <span class="annot">
+    <img loading="lazy" src="https://github.com/Leepy0/AGV_RFID_Manager_/releases/download/ui-snapshots/02_tag_idle.png" alt="태그 탭 전체 화면">
+    <span class="n" style="left:93%;top:6%">1</span>
+    <span class="n" style="left:3%;top:33.5%">2</span>
+    <span class="n" style="left:3%;top:51.5%">3</span>
+    <span class="n" style="left:3%;top:64%">4</span>
+    <span class="n" style="left:3%;top:77.5%">5</span>
+    <span class="n" style="left:3%;top:88%">6</span>
+  </span>
+  <figcaption>태그 탭. 번호는 아래 표와 같습니다. (이 설명서의 앱 그림은 NFC가 없는 시험용 기기에서 찍어 맨 위 카드가 "NFC 꺼짐"으로 나옵니다. 실제 휴대폰에서는 파란 "읽기 대기"로 보입니다.)</figcaption>
 </figure>
 <p>앱은 아래쪽 탭 3개로 나뉩니다. 평소 작업은 모두 <b>태그</b> 탭에서 합니다.</p>
 <table>
   <tr><th style="width:30%">위치</th><th>하는 일</th></tr>
-  <tr><td><b>상태 카드</b> (맨 위 큰 카드)</td><td>지금 상태(읽기 대기 / 쓰기 대기 / 읽기 완료 / 쓰기 완료 / 오류)와 읽거나 쓴 코드를 크게 보여 줍니다. 색으로도 구분됩니다: 파랑=대기·완료, 주황=쓰기 대기, 초록=읽기 완료, 보라=연속 쓰기, 빨강=오류·NFC 꺼짐.</td></tr>
-  <tr><td><b>코드 입력</b></td><td>태그에 쓸 4자리 코드를 넣는 칸입니다. 오른쪽 <kbd>목록</kbd>을 누르면 자주 쓰는 코드를 골라 넣을 수 있습니다.</td></tr>
-  <tr><td><b>프리셋</b></td><td>자주 쓰는 코드 5개를 저장해 두고 한 번에 불러오는 칸입니다.</td></tr>
-  <tr><td><b>최근 작업</b></td><td>최근에 읽고 쓴 기록 3개. <kbd>전체</kbd>를 누르면 전부 봅니다.</td></tr>
-  <tr><td><b><kbd>쓰기</kbd> 버튼</b> (맨 아래 큰 버튼)</td><td>짧게 누르면 1장 쓰기, <b>길게 누르면 연속 쓰기</b>가 시작됩니다.</td></tr>
-  <tr><td><b>탭</b> (맨 아래)</td><td><kbd>태그</kbd> 작업 화면 / <kbd>가이드</kbd> 사용법·에러 코드 / <kbd>설정</kbd></td></tr>
+  <tr><td><b>① 상태 카드</b> (맨 위 큰 카드)</td><td>지금 상태(읽기 대기 / 쓰기 대기 / 읽기 완료 / 쓰기 완료 / 오류)와 읽거나 쓴 코드를 크게 보여 줍니다. 색으로도 구분됩니다: 파랑=대기·완료, 주황=쓰기 대기, 초록=읽기 완료, 보라=연속 쓰기, 빨강=오류·NFC 꺼짐.</td></tr>
+  <tr><td><b>② 코드 입력</b></td><td>태그에 쓸 4자리 코드를 넣는 칸입니다. 오른쪽 <kbd>목록</kbd>을 누르면 자주 쓰는 코드를 골라 넣을 수 있습니다.</td></tr>
+  <tr><td><b>③ 프리셋</b></td><td>자주 쓰는 코드 5개를 저장해 두고 한 번에 불러오는 칸입니다.</td></tr>
+  <tr><td><b>④ 최근 작업</b></td><td>최근에 읽고 쓴 기록 3개. <kbd>전체</kbd>를 누르면 전부 봅니다.</td></tr>
+  <tr><td><b>⑤ <kbd>쓰기</kbd> 버튼</b> (맨 아래 큰 버튼)</td><td>짧게 누르면 1장 쓰기, <b>길게 누르면 연속 쓰기</b>가 시작됩니다.</td></tr>
+  <tr><td><b>⑥ 탭</b> (맨 아래)</td><td><kbd>태그</kbd> 작업 화면 / <kbd>가이드</kbd> 사용법·에러 코드 / <kbd>설정</kbd></td></tr>
 </table>
 <div class="box tip"><b class="t">폴드·태블릿</b>화면이 넓으면 상태 카드와 입력 칸이 좌우로 나란히 배치됩니다. 쓰는 방법은 똑같습니다.</div>
 
