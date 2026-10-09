@@ -85,33 +85,39 @@ adb shell am start -a android.intent.action.VIEW -d "content://com.android.exter
 sleep 4
 shot 30_files_download 0.5
 tap_text "$APK_NAME"
-if wait_contains "알 수 없는 앱" 15; then
-  shot 31_install_blocked 0.5          # "보안상의 이유로 … 설치할 수 없도록 설정" 대화상자
-  tap_text "설정"
-  sleep 2
-  shot 32_allow_source 0.5             # 설정: 이 출처 허용 (꺼짐)
-  tap_text "이 출처 허용"
-  shot 33_allow_source_on 0.5          # 켜짐
-  adb shell input keyevent KEYCODE_BACK
-  sleep 2
-fi
-if wait_contains "설치하시겠습니까" 20; then
-  shot 34_install_confirm 0.5          # "이 애플리케이션을 설치하시겠습니까?"
-  tap_text "설치"
-  if wait_contains "설치되었습니다" 60; then
+# 기종·버전에 따라 나오는 창이 다르므로, 보이는 창에 맞춰 차례로 진행 (최대 90초)
+DONE_INSTALL=""
+for i in $(seq 1 45); do
+  dump
+  if grep -q "설치되었습니다" ui.xml; then
     shot 35_install_done 0.5           # "앱이 설치되었습니다" (완료 / 열기)
-    tap_text "완료"
+    tap_text "완료"; DONE_INSTALL=1; break
+  elif grep -q "설치하시겠습니까" ui.xml; then
+    shot 34_install_confirm 0.5        # "이 애플리케이션을 설치하시겠습니까?"
+    tap_text "설치"; sleep 3
+  elif [ -n "$(find_text "계속")" ]; then
+    shot 31_install_consent 0.5        # "알 수 없는 앱의 공격에 더욱 취약합니다 … 계속" (Android 10 계열)
+    tap_text "계속"
+  elif grep -q "알 수 없는 앱" ui.xml && [ -n "$(find_text "설정")" ]; then
+    shot 31_install_blocked 0.5        # "보안상의 이유로 … 설치할 수 없도록 설정" → 설정
+    tap_text "설정"; sleep 2
+    shot 32_allow_source 0.5           # 설정: 이 출처 허용 (꺼짐)
+    tap_text "이 출처 허용"
+    shot 33_allow_source_on 0.5        # 켜짐
+    adb shell input keyevent KEYCODE_BACK; sleep 2
+  else
+    sleep 2
   fi
-fi
+done
 echo "ui install: $(adb shell dumpsys package $PKG | grep -m1 versionCode | tr -s ' ')" >> snaps/install_result.txt
+
+# 파일 앱 설치가 실패했을 때 대비 (이미 설치돼 있으면 같은 버전 재설치)
+adb install -r "$APK"
 # 앱 서랍에서 아이콘 찾기 화면
 adb shell input keyevent KEYCODE_HOME; sleep 1.5
 adb shell input swipe 540 2100 540 500 400; sleep 2
 shot 36_app_drawer 0.5
 adb shell input keyevent KEYCODE_HOME; sleep 1
-
-# 파일 앱 설치가 실패했을 때 대비 (이미 설치돼 있으면 같은 버전 재설치)
-adb install -r "$APK"
 adb shell am start -n $PKG/.MainActivity
 wait_text "태그" 60
 # 시작 시 업데이트 안내 (Release가 갱신 중이면 안 뜰 수 있음)
