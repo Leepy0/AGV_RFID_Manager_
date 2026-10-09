@@ -70,6 +70,14 @@ jobs:
           disable-animations: true
           script: bash .github/scripts/snap.sh
 
+      # Release 업로드가 실패해도 캡처를 잃지 않도록 워크플로 아티팩트에도 보관
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-snapshots
+          path: snaps
+          if-no-files-found: ignore
+
       - name: 캡처 업로드 (ui-snapshots Release)
         if: always()
         env:
@@ -77,4 +85,11 @@ jobs:
         run: |
           ls -la snaps || exit 0
           gh release delete ui-snapshots --cleanup-tag -y || true
-          gh release create ui-snapshots snaps/* --target "$GITHUB_SHA" --prerelease --title "UI snapshots" --notes "commit ${GITHUB_SHA::7}"
+          # 1) 릴리스 먼저 만들고 (실패하면 어떤 권한이 필요한지 응답 헤더 X-Accepted-GitHub-Permissions 로 확인)
+          if ! gh release create ui-snapshots --target "$GITHUB_SHA" --prerelease --title "UI snapshots" --notes "commit ${GITHUB_SHA::7}"; then
+            echo "::warning title=release create failed::아래 응답 헤더 확인"
+            gh api --include -X POST "repos/$GITHUB_REPOSITORY/releases" -f tag_name=ui-snapshots -f target_commitish="$GITHUB_SHA" -F prerelease=true -f name="UI snapshots" 2>&1 | head -40 || true
+            exit 1
+          fi
+          # 2) 파일 올리기
+          gh release upload ui-snapshots snaps/* --clobber

@@ -119,7 +119,7 @@ adb shell input swipe 540 2100 540 500 400; sleep 2
 shot 36_app_drawer 0.5
 adb shell input keyevent KEYCODE_HOME; sleep 1
 adb shell am start -n $PKG/.MainActivity
-wait_text "태그" 60
+wait_contains "태그\|업데이트가 있어요" 60   # 시작 직후 업데이트 창이 먼저 뜰 수 있음
 # 시작 시 업데이트 안내 (Release가 갱신 중이면 안 뜰 수 있음)
 if wait_text "업데이트가 있어요" 12; then
   shot 01_update_dialog 0.5
