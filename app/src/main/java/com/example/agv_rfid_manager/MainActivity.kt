@@ -1,6 +1,5 @@
 package com.example.agv_rfid_manager
 
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,7 +10,6 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.TagLostException
 import android.nfc.tech.NfcV
-import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -41,19 +39,14 @@ import com.example.agv_rfid_manager.device.CrashLogger
 import com.example.agv_rfid_manager.device.PerfMode
 import com.example.agv_rfid_manager.ui.MainApp
 import com.example.agv_rfid_manager.ui.theme.AppTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity(), TagActions {
     private var nfcAdapter: NfcAdapter? = null
-    private var pendingIntent: PendingIntent? = null
     private var toneGenerator: ToneGenerator? = null
     private var autoLow = false
 
@@ -66,7 +59,7 @@ class MainActivity : ComponentActivity(), TagActions {
     private var partsDirty = false
 
     // 태그 통신은 한 번에 하나씩 (연달아 두 번 감지돼도 겹치지 않게)
-    private val nfcMutex = Mutex()
+    private val nfcLock = Any()
 
     private val nfcStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -80,13 +73,8 @@ class MainActivity : ComponentActivity(), TagActions {
         CrashLogger.install(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         autoLow = PerfMode.detectLowEnd(this)
-
-        val intent = Intent(this, javaClass).apply { addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP) }
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT
-        pendingIntent = PendingIntent.getActivity(this, 0, intent, flags)
 
         lifecycleScope.launch {
             try {
@@ -126,6 +114,12 @@ class MainActivity : ComponentActivity(), TagActions {
                 PerfSetting.LOW -> true
                 PerfSetting.FULL -> false
                 else -> autoLow
+            }
+            // 태그를 기다리는 동안(쓰기 대기·연속 쓰기)에만 화면이 꺼지지 않게
+            val keepOn = tagState.status == TagStatus.WRITING || tagState.isContinuous
+            LaunchedEffect(keepOn) {
+                if (keepOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
             // 상태바·내비게이션바 아이콘 색을 테마에 맞춤
             LaunchedEffect(dark) {
@@ -204,35 +198,27 @@ class MainActivity : ComponentActivity(), TagActions {
         ContextCompat.registerReceiver(this, nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
         nfcAdapter?.let {
             tagState.nfcEnabled = it.isEnabled
-            it.enableForegroundDispatch(this, pendingIntent, null, null)
+            // 리더 모드: ISO 15693(NfcV)만 감지, NDEF 검사 생략, 시스템 감지음 끔(앱 비프음만 남음)
+            val opts = Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250) }
+            it.enableReaderMode(this, NfcAdapter.ReaderCallback { tag -> onTagDiscovered(tag) }, NfcAdapter.FLAG_READER_NFC_V or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS, opts)
         }
     }
 
     override fun onPause() {
         super.onPause()
         unregisterReceiver(nfcStateReceiver)
-        nfcAdapter?.disableForegroundDispatch(this)
+        nfcAdapter?.disableReaderMode(this)
         savePartsIfDirty()
     }
 
-    // 태그 통신은 블로킹 I/O라 메인 스레드에서 하면 화면이 멈춤 → IO 스레드에서 처리하고 결과만 메인에 반영
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        val tag: Tag = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)
-        } else {
-            @Suppress("DEPRECATION") intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
-        }) ?: return
+    // 리더 모드 콜백은 백그라운드 스레드에서 호출됨 → 여기서 블로킹 통신을 하고 결과만 메인 스레드에 반영
+    private fun onTagDiscovered(tag: Tag) {
         val writing = tagState.status == TagStatus.WRITING || tagState.isContinuous
         val target = tagState.targetCode
         val verify = settings.autoVerify
         val kor = isKor
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                nfcMutex.withLock { if (writing) writeAndVerifyTag(tag, target, verify, kor) else readTag(tag, kor) }
-            }
-            applyResult(result)
-        }
+        val result = synchronized(nfcLock) { if (writing) writeAndVerifyTag(tag, target, verify, kor) else readTag(tag, kor) }
+        runOnUiThread { if (!isDestroyed) applyResult(result) }
     }
 
     // 태그 통신 결과 (IO 스레드에서 만들어 메인 스레드에서 상태에 반영)

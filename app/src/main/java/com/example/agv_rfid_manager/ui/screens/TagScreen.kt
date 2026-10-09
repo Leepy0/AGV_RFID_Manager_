@@ -128,7 +128,7 @@ enum class SheetType { CODES, HISTORY }
 private val DEFAULT_PRESETS = listOf("0T01", "0T04", "0T07", "0T21", "0T22")
 
 // 1회 쓰기 대기 시간 (초과 시 시간 초과 처리, 상태 카드의 남은 시간 막대와 같은 값)
-const val WRITE_TIMEOUT_MS = 5000L
+const val WRITE_TIMEOUT_MS = 8000L
 
 // 화면과 무관하게 항상 동작해야 하는 태그 로직 (연속 쓰기 복귀, 쓰기 대기 시간 초과 등)
 @Composable
