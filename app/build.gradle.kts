@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "2.5.0"
+val appVersionName = "2.5.1"
 
 // versionCode = git 커밋 수 (PC·CI 빌드 모두 같은 값, 커밋마다 자동 증가 → 앱 내 업데이트 비교용)
 // CI는 checkout fetch-depth: 0 필요. git이 없으면 1

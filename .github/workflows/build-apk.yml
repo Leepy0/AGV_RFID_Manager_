@@ -33,12 +33,12 @@ jobs:
       # Android SDK는 runner에 기본 설치됨 (부족한 platform은 AGP가 자동 다운로드)
       - uses: gradle/actions/setup-gradle@v4
 
-      # debug 서명 키는 app/build.gradle.kts의 signingConfigs에서 app/debug.keystore로 고정
-      - name: 디버그 APK 빌드
+      # release 빌드(R8 축소·최적화, 난독화 없음)를 debug와 같은 키(app/debug.keystore)로 서명 → 기존 설치 위에 업데이트 가능
+      - name: APK 빌드 (release)
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew assembleDebug 2>&1 | tee build.log
+          ./gradlew assembleRelease 2>&1 | tee build.log
 
       # 실패 시 오류 요약을 annotation으로 남김 (로그 없이도 원인 확인용)
       - name: 빌드 오류 요약
@@ -53,13 +53,13 @@ jobs:
       - name: 의존성 버전 기록
         continue-on-error: true
         run: |
-          V=$(./gradlew -q :app:dependencies --configuration debugRuntimeClasspath | grep -m1 "dev.chrisbanes.haze:haze:" | sed "s/^[^d]*//" || true)
+          V=$(./gradlew -q :app:dependencies --configuration releaseRuntimeClasspath | grep -m1 "dev.chrisbanes.haze:haze:" | sed "s/^[^d]*//" || true)
           echo "::notice title=Haze version::$V"
 
       - name: APK 경로 확인
         id: apk
         run: |
-          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
           echo "path=$APK" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$APK")" >> "$GITHUB_OUTPUT"
 
@@ -82,7 +82,7 @@ jobs:
           name: ${{ steps.apk.outputs.name }}
           path: ${{ steps.apk.outputs.path }}
 
-      # 항상 같은 주소(latest-debug)로 최신 APK 덮어쓰기
+      # 항상 같은 주소(latest-debug — 앱 업데이트 확인 주소라 이름 유지)로 최신 APK 덮어쓰기
       - name: Release(latest-debug) 갱신
         env:
           GH_TOKEN: ${{ github.token }}
@@ -91,5 +91,5 @@ jobs:
           gh release create latest-debug "${{ steps.apk.outputs.path }}" version.json \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "Latest debug build" \
+            --title "Latest build" \
             --notes "branch: ${GITHUB_REF_NAME} / commit: ${GITHUB_SHA::7} / run #${GITHUB_RUN_NUMBER}"

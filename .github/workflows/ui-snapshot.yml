@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: "캡처에 쓸 빌드 (debug / release — release는 R8 축소 빌드 검증용)"
+        description: "캡처에 쓸 빌드 (배포와 같은 release가 기본, debug는 비교용)"
         type: choice
-        options: [debug, release]
-        default: debug
+        options: [release, debug]
+        default: release
   push:
     branches: [ master ]
     # 문서·매뉴얼(docs/)만 바뀐 푸시는 빌드하지 않음 (앱 변경 없이 업데이트가 뜨는 것 방지)
@@ -48,11 +48,11 @@ jobs:
         run: |
           ls -la /dev/kvm && echo "::notice title=KVM::available" || echo "::warning title=KVM::not available"
 
-      - name: 디버그 APK 빌드
+      - name: APK 빌드 (배포와 같은 release가 기본)
         run: |
           chmod +x gradlew
           # versionCode를 1로 낮춰 빌드 → 앱 내 업데이트 흐름(안내·다운로드·설치)까지 캡처
-          BT="${{ github.event.inputs.build_type || 'debug' }}"
+          BT="${{ github.event.inputs.build_type || 'release' }}"
           echo "::notice title=Build type::$BT"
           ./gradlew "assemble${BT^}" -PversionCodeOverride=1
 
