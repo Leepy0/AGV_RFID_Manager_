@@ -54,7 +54,64 @@ long_text() {
 
 shot() { sleep "${2:-1.5}"; adb exec-out screencap -p > "snaps/$1.png"; }
 
-adb install -r "$(ls app/build/outputs/apk/debug/*.apk | head -1)"
+# 화면 어딘가에 글자가 포함돼 있는지 (부분 일치, 최대 $2초)
+wait_contains() {
+  for i in $(seq 1 "${2:-30}"); do
+    dump
+    grep -q -- "$1" ui.xml 2>/dev/null && return 0
+    sleep 1
+  done
+  echo "TIMEOUT waiting(contains): $1"
+  return 1
+}
+
+# ---------- 시스템 언어를 한국어로 (설치 화면·설정 화면을 매뉴얼용으로 캡처) ----------
+adb root >/dev/null 2>&1 || true
+sleep 3; adb wait-for-device
+adb shell "setprop persist.sys.locale ko-KR; setprop ctl.restart zygote" || true
+sleep 8
+for i in $(seq 1 45); do
+  adb shell dumpsys window 2>/dev/null | grep mCurrentFocus | grep -qi launcher && break
+  sleep 2
+done
+sleep 3
+echo "locale: $(adb shell getprop persist.sys.locale)" > snaps/install_result.txt
+
+# ---------- 처음 설치 흐름: 파일 앱에서 APK를 눌러 설치 (출처 허용 → 설치 확인 → 완료) ----------
+APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+APK_NAME=$(basename "$APK")
+adb push "$APK" "/sdcard/Download/$APK_NAME"
+adb shell am start -a android.intent.action.VIEW -d "content://com.android.externalstorage.documents/document/primary%3ADownload" -t vnd.android.document/directory
+sleep 4
+shot 30_files_download 0.5
+tap_text "$APK_NAME"
+if wait_contains "알 수 없는 앱" 15; then
+  shot 31_install_blocked 0.5          # "보안상의 이유로 … 설치할 수 없도록 설정" 대화상자
+  tap_text "설정"
+  sleep 2
+  shot 32_allow_source 0.5             # 설정: 이 출처 허용 (꺼짐)
+  tap_text "이 출처 허용"
+  shot 33_allow_source_on 0.5          # 켜짐
+  adb shell input keyevent KEYCODE_BACK
+  sleep 2
+fi
+if wait_contains "설치하시겠습니까" 20; then
+  shot 34_install_confirm 0.5          # "이 애플리케이션을 설치하시겠습니까?"
+  tap_text "설치"
+  if wait_contains "설치되었습니다" 60; then
+    shot 35_install_done 0.5           # "앱이 설치되었습니다" (완료 / 열기)
+    tap_text "완료"
+  fi
+fi
+echo "ui install: $(adb shell dumpsys package $PKG | grep -m1 versionCode | tr -s ' ')" >> snaps/install_result.txt
+# 앱 서랍에서 아이콘 찾기 화면
+adb shell input keyevent KEYCODE_HOME; sleep 1.5
+adb shell input swipe 540 2100 540 500 400; sleep 2
+shot 36_app_drawer 0.5
+adb shell input keyevent KEYCODE_HOME; sleep 1
+
+# 파일 앱 설치가 실패했을 때 대비 (이미 설치돼 있으면 같은 버전 재설치)
+adb install -r "$APK"
 adb shell am start -n $PKG/.MainActivity
 wait_text "태그" 60
 # 시작 시 업데이트 안내 (Release가 갱신 중이면 안 뜰 수 있음)
