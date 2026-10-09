@@ -1,0 +1,41 @@
+name: Manual (GitHub Pages)
+
+# docs/ 폴더(설치·사용 매뉴얼)를 GitHub Pages로 배포
+# https://leepy0.github.io/AGV_RFID_Manager_/
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # 저장소에 Pages가 아직 켜져 있지 않으면 자동으로 켬 (Source: GitHub Actions)
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

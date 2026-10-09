@@ -3,6 +3,11 @@ name: Build APK
 on:
   push:
     branches: [ master ]
+    # 문서·매뉴얼(docs/)만 바뀐 푸시는 빌드하지 않음 (앱 변경 없이 업데이트가 뜨는 것 방지)
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:   # Actions 탭에서 수동 실행
 
 permissions:
