@@ -1,13 +1,17 @@
 package com.example.agv_rfid_manager.device
 
+import android.app.DownloadManager
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -121,15 +125,8 @@ object AppUpdater {
         }
     }
 
-    // '이 출처 허용'을 켜고 돌아왔을 때 (MainActivity.onResume)
-    fun onResume(ctx: Context) {
-        val s = step
-        if (s is UpdStep.NeedPermission && ctx.packageManager.canRequestPackageInstalls()) {
-            install(ctx.applicationContext, s.info, s.file)
-        } else {
-            autoCheck(ctx)
-        }
-    }
+    // 앱이 앞으로 돌아올 때 (MainActivity.onResume)
+    fun onResume(ctx: Context) = autoCheck(ctx)
 
     fun openInstallPermission(ctx: Context) {
         val i = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}"))
@@ -137,17 +134,31 @@ object AppUpdater {
         try { ctx.startActivity(i) } catch (_: Exception) { }
     }
 
+    // 앱은 설치 권한이 없다: 받은 APK를 다운로드 폴더에 복사하고 다운로드 목록을 연다. 설치는 사용자가 APK를 눌러 직접 한다.
     private fun install(app: Context, info: UpdateInfo, file: File) {
-        if (!app.packageManager.canRequestPackageInstalls()) {
-            step = UpdStep.NeedPermission(info, file)
-            return
-        }
-        val uri = FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", file)
-        val i = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, "application/vnd.android.package-archive")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         try {
-            app.startActivity(i)
+            val resolver = app.contentResolver
+            val mime = "application/vnd.android.package-archive"
+            // 이전에 이 앱이 올린 업데이트 APK 정리
+            resolver.delete(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? AND ${MediaStore.Downloads.MIME_TYPE} = ?",
+                arrayOf("AGV_RFID_Manager_v%.apk", mime),
+            )
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, "AGV_RFID_Manager_v${info.name}.apk")
+                put(MediaStore.Downloads.MIME_TYPE, mime)
+                put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: throw IOException("insert")
+            try {
+                resolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out) } }
+            } catch (e: Exception) {
+                runCatching { resolver.delete(uri, null, null) }
+                throw e
+            }
+            app.startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            Toast.makeText(app, "다운로드 목록에서 AGV_RFID_Manager_v${info.name}.apk를 눌러 설치하세요", Toast.LENGTH_LONG).show()
             step = UpdStep.None
         } catch (_: Exception) {
             step = UpdStep.Failed(info)
