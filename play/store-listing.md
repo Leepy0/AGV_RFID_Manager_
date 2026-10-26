@@ -101,9 +101,12 @@ Requires an Android phone with NFC. Designed for ISO 15693 (NFC-V) AGV floor tag
 
 | 항목 | 규격 | 상태 |
 |---|---|---|
-| 앱 아이콘 | 512×512 PNG, 32비트, 1MB 이하 | 만들어야 함 (런처 아이콘 원본으로) |
-| 그래픽 이미지 | 1024×500 PNG/JPG | 만들어야 함 |
-| 휴대폰 스크린샷 | 2~8장, 짧은 변 320px 이상, 16:9 또는 9:16 | 받은 3장(태그·가이드·설정) 사용 가능 |
+| 앱 아이콘 | 512×512 PNG, 32비트, 1MB 이하 | `graphics/icon-512.png` |
+| 그래픽 이미지 | 1024×500 PNG/JPG | `graphics/feature-1024x500.png` |
+| 휴대폰 스크린샷 | 2~8장, 짧은 변 320px 이상 | `graphics/screenshot-1~3-*.jpg` |
+
+그래픽 원본은 `graphics/*.html` (런처 아이콘 벡터와 같은 도형). 고치면 Edge 헤드리스로 다시 캡처:
+`msedge --headless=new --window-size=1024,500 --screenshot=feature-1024x500.png file:///.../feature.html`
 
 ## 앱 콘텐츠 설문 답변
 
