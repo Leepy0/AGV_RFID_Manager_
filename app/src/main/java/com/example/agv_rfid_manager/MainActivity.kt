@@ -13,6 +13,7 @@ import android.nfc.TagLostException
 import android.nfc.tech.NfcV
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.WindowManager
@@ -43,14 +44,16 @@ import com.example.agv_rfid_manager.ui.MainApp
 import com.example.agv_rfid_manager.ui.theme.AppTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// 정상 통신(연결·읽기·쓰기·확인)은 1초 안에 끝남. 이보다 오래 잡혀 있으면 멈춘 것으로 본다
+private const val NFC_STUCK_MS = 3000L
 
 class MainActivity : ComponentActivity(), TagActions {
     private var nfcAdapter: NfcAdapter? = null
@@ -67,7 +70,10 @@ class MainActivity : ComponentActivity(), TagActions {
     private var partsDirty = false
 
     // 태그 통신은 한 번에 하나씩 (연달아 두 번 감지돼도 겹치지 않게)
-    private val nfcMutex = Mutex()
+    // 통신이 응답 없이 멈추면 이후 태그를 전부 못 받아 앱 재시작이 필요했음 → 오래 멈춘 통신은 끊고 새 태그를 받는다
+    private var nfcJob: Job? = null
+    private var nfcStartedAt = 0L
+    @Volatile private var activeTech: NfcV? = null
 
     private val nfcStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -234,16 +240,31 @@ class MainActivity : ComponentActivity(), TagActions {
         } else {
             @Suppress("DEPRECATION") intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
         }) ?: return
+        if (nfcJob?.isActive == true) {
+            val busyMs = SystemClock.elapsedRealtime() - nfcStartedAt
+            if (busyMs < NFC_STUCK_MS) return  // 통신 중에 같은 태그가 다시 감지된 것: 무시
+            abortStuckNfc(busyMs)
+        }
         val writing = tagState.status == TagStatus.WRITING || tagState.isContinuous
         val target = tagState.targetCode
         val verify = settings.autoVerify
         val kor = isKor
-        lifecycleScope.launch {
+        nfcStartedAt = SystemClock.elapsedRealtime()
+        nfcJob = lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                nfcMutex.withLock { if (writing) writeAndVerifyTag(tag, target, verify, kor) else readTag(tag, kor) }
+                if (writing) writeAndVerifyTag(tag, target, verify, kor) else readTag(tag, kor)
             }
             applyResult(result)
         }
+    }
+
+    // 멈춘 통신 끊기: 다른 스레드에서 close()하면 막혀 있던 transceive가 IOException으로 풀린다 (TagTechnology.close 명세)
+    private fun abortStuckNfc(busyMs: Long) {
+        CrashLogger.write(this, "WARN nfc stuck", IllegalStateException("tag I/O blocked ${busyMs}ms"))
+        addHistoryEntry("[NFC RESET] ${busyMs / 1000}s")
+        nfcJob?.cancel()  // 늦게 끝나도 결과는 화면에 반영하지 않음
+        val tech = activeTech
+        if (tech != null) lifecycleScope.launch(Dispatchers.IO) { try { tech.close() } catch (_: Exception) {} }
     }
 
     // 태그 통신 결과 (IO 스레드에서 만들어 메인 스레드에서 상태에 반영)
@@ -303,6 +324,7 @@ class MainActivity : ComponentActivity(), TagActions {
 
     private fun readTag(tag: Tag, kor: Boolean): TagResult {
         val nfcV = NfcV.get(tag) ?: return TagResult.Failed(tr("err_unsupp", kor), tr("err_unsupp_d", kor))
+        activeTech = nfcV
         return try {
             nfcV.connect()
             val response = nfcV.transceive(readCommand(tag))
@@ -311,11 +333,13 @@ class MainActivity : ComponentActivity(), TagActions {
             commError(e, "WARN nfc read", kor)
         } finally {
             try { nfcV.close() } catch (_: Exception) {}
+            if (activeTech === nfcV) activeTech = null
         }
     }
 
     private fun writeAndVerifyTag(tag: Tag, data: String, verify: Boolean, kor: Boolean): TagResult {
         val nfcV = NfcV.get(tag) ?: return TagResult.Failed(tr("err_unsupp", kor), tr("err_unsupp_d", kor))
+        activeTech = nfcV
         return try {
             nfcV.connect()
             val readCmd = readCommand(tag)
@@ -362,6 +386,7 @@ class MainActivity : ComponentActivity(), TagActions {
             commError(e, "WARN nfc write", kor)
         } finally {
             try { nfcV.close() } catch (_: Exception) {}
+            if (activeTech === nfcV) activeTech = null
         }
     }
 
