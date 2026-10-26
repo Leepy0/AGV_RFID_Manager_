@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Play 업로드 키 (저장소에 올리지 않음)
+keystore.properties
+*.jks

@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.pm.PackageInfoCompat
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.agv_rfid_manager.R
@@ -49,8 +50,6 @@ import com.example.agv_rfid_manager.data.PerfSetting
 import com.example.agv_rfid_manager.data.RFIDStore
 import com.example.agv_rfid_manager.data.SettingsState
 import com.example.agv_rfid_manager.data.ThemeMode
-import com.example.agv_rfid_manager.device.AppUpdater
-import com.example.agv_rfid_manager.device.CheckState
 import com.example.agv_rfid_manager.device.CrashLogger
 import com.example.agv_rfid_manager.ui.components.AppDialog
 import com.example.agv_rfid_manager.ui.components.ChoiceDialog
@@ -77,10 +76,9 @@ fun SettingsContent(settings: SettingsState, autoLow: Boolean, bottomPadding: Dp
     fun putBool(key: Preferences.Key<Boolean>, v: Boolean) { scope.launch { context.RFIDStore.edit { it[key] = v } } }
     fun putString(key: Preferences.Key<String>, v: String) { scope.launch { context.RFIDStore.edit { it[key] = v } } }
 
-    val version = remember {
-        try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-    }
-    val versionCode = remember { AppUpdater.currentCode(context) }
+    val pkgInfo = remember { try { context.packageManager.getPackageInfo(context.packageName, 0) } catch (_: Exception) { null } }
+    val version = pkgInfo?.versionName ?: ""
+    val versionCode = pkgInfo?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 0L
     val themeLabel = when (settings.themeMode) {
         ThemeMode.LIGHT -> t("th_light")
         ThemeMode.SYSTEM -> t("th_system")
@@ -137,16 +135,6 @@ fun SettingsContent(settings: SettingsState, autoLow: Boolean, bottomPadding: Dp
         }
         OneGroup(t("s_info")) {
             OneRow(t("s_ver"), t("s_ver_v").format(version, versionCode))
-            OneDivider()
-            val latest = AppUpdater.latest
-            val updSummary = when (AppUpdater.check) {
-                CheckState.CHECKING -> t("s_upd_chk")
-                CheckState.LATEST -> t("s_upd_latest")
-                CheckState.AVAILABLE -> latest?.let { t("s_upd_new").format(it.name, it.code) } ?: t("s_upd_d")
-                CheckState.FAILED -> t("s_upd_fail")
-                CheckState.NONE -> t("s_upd_d")
-            }
-            OneRow(t("s_upd"), updSummary, summaryBlue = AppUpdater.check == CheckState.AVAILABLE) { AppUpdater.manualCheck(context) }
         }
         Spacer(Modifier.height(bottomPadding))
     }

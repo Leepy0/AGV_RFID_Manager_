@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     branches: [ master ]
-    # 문서·매뉴얼(docs/)만 바뀐 푸시는 빌드하지 않음 (앱 변경 없이 업데이트가 뜨는 것 방지)
+    # 문서·매뉴얼(docs/)만 바뀐 푸시는 빌드하지 않음
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:   # Actions 탭에서 수동 실행
 
 permissions:
-  contents: write      # Release 생성용
+  contents: read
 
 concurrency:
   group: build-apk
@@ -33,12 +33,12 @@ jobs:
       # Android SDK는 runner에 기본 설치됨 (부족한 platform은 AGP가 자동 다운로드)
       - uses: gradle/actions/setup-gradle@v4
 
-      # release 빌드(R8 축소·최적화, 난독화 없음)를 debug와 같은 키(app/debug.keystore)로 서명 → 기존 설치 위에 업데이트 가능
-      - name: APK 빌드 (release)
+      # 빌드 확인용: 업로드 키가 없어 debug 키로 서명됨 → Play 업로드용 AAB는 PC에서 업로드 키로 만든다
+      - name: APK·AAB 빌드 (release)
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew assembleRelease 2>&1 | tee build.log
+          ./gradlew assembleRelease bundleRelease 2>&1 | tee build.log
 
       # 실패 시 오류 요약을 annotation으로 남김 (로그 없이도 원인 확인용)
       - name: 빌드 오류 요약
@@ -63,33 +63,7 @@ jobs:
           echo "path=$APK" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$APK")" >> "$GITHUB_OUTPUT"
 
-      # 앱 내 업데이트용 버전 정보 (versionCode는 build.gradle.kts와 같은 커밋 수)
-      - name: version.json 생성
-        id: ver
-        run: |
-          CODE=$(git rev-list --count HEAD)
-          NAME="${{ steps.apk.outputs.name }}"
-          VN=$(echo "$NAME" | sed -E 's/^AGV_RFID_Manager_v(.+)\.apk$/\1/')
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/latest-debug/${NAME}"
-          NOTES=$(git log -1 --pretty=%s | sed -E 's/ *\[snap\]//')
-          jq -n --argjson code "$CODE" --arg name "$VN" --arg url "$URL" --arg notes "$NOTES" \
-            '{versionCode: $code, versionName: $name, url: $url, notes: $notes}' > version.json
-          cat version.json
-          echo "::notice title=App version::v$VN build $CODE"
-
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.apk.outputs.name }}
           path: ${{ steps.apk.outputs.path }}
-
-      # 항상 같은 주소(latest-debug — 앱 업데이트 확인 주소라 이름 유지)로 최신 APK 덮어쓰기
-      - name: Release(latest-debug) 갱신
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release delete latest-debug --cleanup-tag -y || true
-          gh release create latest-debug "${{ steps.apk.outputs.path }}" version.json \
-            --target "$GITHUB_SHA" \
-            --prerelease \
-            --title "Latest build" \
-            --notes "branch: ${GITHUB_REF_NAME} / commit: ${GITHUB_SHA::7} / run #${GITHUB_RUN_NUMBER}"

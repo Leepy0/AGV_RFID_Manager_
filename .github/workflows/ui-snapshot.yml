@@ -51,10 +51,9 @@ jobs:
       - name: APK 빌드 (배포와 같은 release가 기본)
         run: |
           chmod +x gradlew
-          # versionCode를 1로 낮춰 빌드 → 앱 내 업데이트 흐름(안내·다운로드·설치)까지 캡처
           BT="${{ github.event.inputs.build_type || 'release' }}"
           echo "::notice title=Build type::$BT"
-          ./gradlew "assemble${BT^}" -PversionCodeOverride=1
+          ./gradlew "assemble${BT^}"
 
       - name: 에뮬레이터 실행 및 캡처
         uses: reactivecircus/android-emulator-runner@v2

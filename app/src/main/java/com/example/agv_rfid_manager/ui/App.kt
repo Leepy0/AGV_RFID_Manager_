@@ -203,8 +203,6 @@ fun MainApp(
         }
     }
 
-    UpdateDialogs()
-
     if (confirmClear) {
         ConfirmDialog(
             title = t("d_clr_title"),

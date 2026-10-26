@@ -1,11 +1,13 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersionName = "2.6.3"
+val appVersionName = "2.7.0"
 
-// versionCode = git 커밋 수 (PC·CI 빌드 모두 같은 값, 커밋마다 자동 증가 → 앱 내 업데이트 비교용)
+// versionCode = git 커밋 수 (PC·CI 빌드 모두 같은 값, 커밋마다 자동 증가 → Play 업로드마다 커져야 함)
 // CI는 checkout fetch-depth: 0 필요. git이 없으면 1
 val gitCommitCount: Int = try {
     providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
@@ -13,6 +15,9 @@ val gitCommitCount: Int = try {
 } catch (_: Exception) {
     1
 }
+
+val uploadKey: Properties? = rootProject.file("keystore.properties").takeIf { it.exists() }
+    ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
 
 android {
     namespace = "com.example.agv_rfid_manager"
@@ -23,11 +28,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.agv_rfid_manager"
+        // Play 등록 ID (한 번 올리면 못 바꿈). namespace·코드 패키지는 com.example 그대로 둠
+        applicationId = "com.leepy0.agvrfidmanager"
         minSdk = 26
         targetSdk = 36
-        // 스냅샷 테스트용: -PversionCodeOverride=1 로 낮은 버전을 만들어 업데이트 흐름 확인
-        versionCode = providers.gradleProperty("versionCodeOverride").orNull?.toIntOrNull() ?: gitCommitCount
+        versionCode = gitCommitCount
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -41,12 +46,19 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // Play 업로드 키: 저장소 루트 keystore.properties(git 제외)에 storeFile·storePassword·keyAlias·keyPassword
+        if (uploadKey != null) create("upload") {
+            storeFile = file(uploadKey.getProperty("storeFile"))
+            storePassword = uploadKey.getProperty("storePassword")
+            keyAlias = uploadKey.getProperty("keyAlias")
+            keyPassword = uploadKey.getProperty("keyPassword")
+        }
     }
 
     buildTypes {
         release {
-            // debug와 같은 키로 서명 → 기존 설치 위에 바로 업데이트 가능
-            signingConfig = signingConfigs.getByName("debug")
+            // 업로드 키가 없는 곳(CI·스냅샷)은 debug 키로 서명 → 설치·확인용일 뿐 Play에는 못 올림
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
